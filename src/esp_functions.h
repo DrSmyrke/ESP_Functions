@@ -56,6 +56,16 @@ namespace esp {
 	 * @return {uint8_t} result ( 1 - success, 0 - error )
 	 */
 	uint8_t saveSTAconfig(const char *ssid, const char *key);
+	/**
+	 * set redirect to / from web
+	 * @return none
+	 */
+	void setWebRedirect(ESP8266WebServer *webServer);
+	/**
+	 * checking Connections for AP from STA mode
+	 * @return none
+	 */
+	uint8_t isWiFiConnection();
 }
 
 //-------------------------------------------------------------------------------
