@@ -10,7 +10,12 @@
 
 //-------------------------------------------------------------------------------
 #include <stdint.h>
-#include <ESP8266WebServer.h>
+
+#if defined(ARDUINO_ARCH_ESP8266)
+	#include <ESP8266WebServer.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+	#include <WebServer.h>
+#endif
 
 //-------------------------------------------------------------------------------
 namespace esp {
@@ -30,13 +35,18 @@ namespace esp {
 	uint8_t saveAPconfig(const char *ssid, const char *key);
 	/**
 	 * checking acces from web
+	 * @param {WebServer*} user
 	 * @param {char*} user
 	 * @param {char*} password
 	 * @param {char*} realm
 	 * @param {char*} failMess
 	 * @return {uint8_t} result ( 1 - success, 0 - error )
 	 */
+#if defined(ARDUINO_ARCH_ESP8266)
 	uint8_t checkWebAuth(ESP8266WebServer *webServer, const char *user, const char *password, const char *realm, const char *failMess);
+#elif defined(ARDUINO_ARCH_ESP32)
+	uint8_t checkWebAuth(WebServer *webServer, const char *user, const char *password, const char *realm, const char *failMess);
+#endif
 	/**
 	 * checking STA or AP mode
 	 * @return none
@@ -60,7 +70,11 @@ namespace esp {
 	 * set redirect to / from web
 	 * @return none
 	 */
+#if defined(ARDUINO_ARCH_ESP8266)
 	void setWebRedirect(ESP8266WebServer *webServer);
+#elif defined(ARDUINO_ARCH_ESP32)
+	void setWebRedirect(WebServer *webServer);
+#endif
 	/**
 	 * checking Connections for AP from STA mode
 	 * @return none
