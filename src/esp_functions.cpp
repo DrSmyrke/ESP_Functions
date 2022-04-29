@@ -1,7 +1,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include "esp_functions.h"
 
-#include <LittleFS.h>
+
+#if defined(ARDUINO_ARCH_ESP8266)
+	#include <LittleFS.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+	#include <SPIFFS.h>
+#endif
 
 //-------------------------------------------------------------------------------
 namespace esp {
@@ -12,8 +17,13 @@ namespace esp {
 		uint8_t ssidLen = 0;
 		uint8_t keyLen = 0;
 
+#if defined(ARDUINO_ARCH_ESP8266)
 		if( LittleFS.exists( ESP_AP_CONFIG_FILE ) ){	
 			File f = LittleFS.open( ESP_AP_CONFIG_FILE, "r");
+#elif defined(ARDUINO_ARCH_ESP32)
+		if( SPIFFS.exists( ESP_AP_CONFIG_FILE ) ){	
+			File f = SPIFFS.open( ESP_AP_CONFIG_FILE, "r");
+#endif
 			if( f ){
 				bool first = true;
 				while( f.available() ){
@@ -49,8 +59,11 @@ namespace esp {
 	uint8_t saveAPconfig(const char *ssid, const char *key)
 	{
 		uint8_t result = 0;
-
+#if defined(ARDUINO_ARCH_ESP8266)
 		File f = LittleFS.open( ESP_AP_CONFIG_FILE, "w");
+#elif defined(ARDUINO_ARCH_ESP32)
+		File f = SPIFFS.open( ESP_AP_CONFIG_FILE, "w");
+#endif
 		if( f ){
 			f.write( ssid );
 			f.write( '\n' );
@@ -83,7 +96,11 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	uint8_t isClient()
 	{
+#if defined(ARDUINO_ARCH_ESP8266)
 		return ( LittleFS.exists( ESP_STA_CONFIG_FILE ) ) ? 1 : 0;
+#elif defined(ARDUINO_ARCH_ESP32)
+		return ( SPIFFS.exists( ESP_STA_CONFIG_FILE ) ) ? 1 : 0;
+#endif
 	}
 
 	//-------------------------------------------------------------------------------
@@ -93,8 +110,13 @@ namespace esp {
 		uint8_t ssidLen = 0;
 		uint8_t keyLen = 0;
 
+#if defined(ARDUINO_ARCH_ESP8266)
 		if( LittleFS.exists( ESP_STA_CONFIG_FILE ) ){	
 			File f = LittleFS.open( ESP_STA_CONFIG_FILE, "r");
+#elif defined(ARDUINO_ARCH_ESP32)
+		if( SPIFFS.exists( ESP_STA_CONFIG_FILE ) ){	
+			File f = SPIFFS.open( ESP_STA_CONFIG_FILE, "r");
+#endif
 			if( f ){
 				bool first = true;
 				while( f.available() ){
@@ -130,8 +152,11 @@ namespace esp {
 	uint8_t saveSTAconfig(const char *ssid, const char *key)
 	{
 		uint8_t result = 0;
-
+#if defined(ARDUINO_ARCH_ESP8266)
 		File f = LittleFS.open( ESP_STA_CONFIG_FILE, "w");
+#elif defined(ARDUINO_ARCH_ESP32)
+		File f = SPIFFS.open( ESP_STA_CONFIG_FILE, "w");
+#endif
 		if( f ){
 			f.write( ssid );
 			f.write( '\n' );
