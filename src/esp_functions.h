@@ -66,6 +66,11 @@ namespace esp {
 	 * @return none
 	 */
 	uint8_t isWiFiConnection();
+	/**
+	 * get esp chip ID
+	 * @return {uint32_t} ID or 0 if unknown device
+	 */
+	uint32_t getMyID();
 }
 
 //-------------------------------------------------------------------------------

@@ -159,6 +159,24 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
+	uint32_t getMyID()
+	{
+		#if defined(ARDUINO_ARCH_AVR)
+			uint32_t _id =
+				(uint32_t)boot_signature_byte_get(0x13) << 24 |
+				(uint32_t)boot_signature_byte_get(0x15) << 16 |
+				(uint32_t)boot_signature_byte_get(0x16) << 8 |
+				(uint32_t)boot_signature_byte_get(0x17);
+			return _id;
+		#elif defined(ARDUINO_ARCH_ESP8266)
+			return ESP.getChipId();
+		#elif defined(ARDUINO_ARCH_ESP32)
+			uint32_t _id = (uint32_t)((uint64_t)ESP.getEfuseMac() >> 16);
+			return ((((_id)&0xff000000) >> 24) | (((_id)&0x00ff0000) >> 8) | (((_id)&0x0000ff00) << 8) | (((_id)&0x000000ff) << 24)); // swap bits
+		#endif
+		return 0;
+	}
+
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
