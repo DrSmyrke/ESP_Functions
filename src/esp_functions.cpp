@@ -56,18 +56,24 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	uint8_t saveAPconfig(const char *ssid, const char *key)
+	uint8_t saveConfig(const char *ssid, const char *key, uint8_t mode)
 	{
 		uint8_t result = 0;
 #if defined(ARDUINO_ARCH_ESP8266)
-		File f = LittleFS.open( ESP_AP_CONFIG_FILE, "w");
+		File f = LittleFS.open( ( mode == esp::AP_MODE ) ? ESP_AP_CONFIG_FILE : ESP_STA_CONFIG_FILE, "w");
 #elif defined(ARDUINO_ARCH_ESP32)
-		File f = SPIFFS.open( ESP_AP_CONFIG_FILE, "w");
+		File f = SPIFFS.open( ( mode == esp::AP_MODE ) ? ESP_AP_CONFIG_FILE : ESP_STA_CONFIG_FILE, "w");
 #endif
 		if( f ){
+#if defined(ARDUINO_ARCH_ESP8266)
 			f.write( ssid );
 			f.write( '\n' );
 			f.write( key );
+#elif defined(ARDUINO_ARCH_ESP32)
+			f.write( (uint8_t*)ssid );
+			f.write( '\n' );
+			f.write( (uint8_t*)key );
+#endif
 			f.write( '\n' );
 			f.close();
 			result = 1;
@@ -144,27 +150,6 @@ namespace esp {
 		}
 
 		if( ssidLen > 2 && keyLen >= 8 ) result = 1;
-
-		return result;
-	}
-
-	//-------------------------------------------------------------------------------
-	uint8_t saveSTAconfig(const char *ssid, const char *key)
-	{
-		uint8_t result = 0;
-#if defined(ARDUINO_ARCH_ESP8266)
-		File f = LittleFS.open( ESP_STA_CONFIG_FILE, "w");
-#elif defined(ARDUINO_ARCH_ESP32)
-		File f = SPIFFS.open( ESP_STA_CONFIG_FILE, "w");
-#endif
-		if( f ){
-			f.write( ssid );
-			f.write( '\n' );
-			f.write( key );
-			f.write( '\n' );
-			f.close();
-			result = 1;
-		}
 
 		return result;
 	}

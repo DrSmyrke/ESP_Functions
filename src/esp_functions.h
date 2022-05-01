@@ -19,6 +19,10 @@
 
 //-------------------------------------------------------------------------------
 namespace esp {
+	enum{
+		STA_MODE,
+		AP_MODE,
+	};
 	/**
 	 * read ssid and key for AP from spi fs
 	 * @param {char*} ssid
@@ -27,12 +31,13 @@ namespace esp {
 	 */
 	uint8_t readAPconfig(char *ssid, char *key);
 	/**
-	 * save ssid and key for AP from spi fs
+	 * save ssid and key from spi fs
 	 * @param {char*} ssid
 	 * @param {char*} key
+	 * @param {uint8_t} mode
 	 * @return {uint8_t} result ( 1 - success, 0 - error )
 	 */
-	uint8_t saveAPconfig(const char *ssid, const char *key);
+	uint8_t saveConfig(const char *ssid, const char *key, uint8_t mode);
 	/**
 	 * checking acces from web
 	 * @param {WebServer*} user
@@ -59,13 +64,6 @@ namespace esp {
 	 * @return {uint8_t} result ( 1 - success, 0 - error )
 	 */
 	uint8_t readSTAconfig(char *ssid, char *key);
-	/**
-	 * save ssid and key for STA mode from spi fs
-	 * @param {char*} ssid
-	 * @param {char*} key
-	 * @return {uint8_t} result ( 1 - success, 0 - error )
-	 */
-	uint8_t saveSTAconfig(const char *ssid, const char *key);
 	/**
 	 * set redirect to / from web
 	 * @return none
