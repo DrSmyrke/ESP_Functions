@@ -70,9 +70,9 @@ namespace esp {
 			f.write( '\n' );
 			f.write( key );
 #elif defined(ARDUINO_ARCH_ESP32)
-			f.write( (uint8_t*)ssid );
+			f.write( (uint8_t*)ssid, strlen( ssid ) );
 			f.write( '\n' );
-			f.write( (uint8_t*)key );
+			f.write( (uint8_t*)key, strlen( key ) );
 #endif
 			f.write( '\n' );
 			f.close();
