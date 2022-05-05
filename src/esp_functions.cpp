@@ -208,7 +208,7 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	bool wifi_AP_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
 	{
-		WiFi.hostname( DEVICE_NAME );
+		WiFi.hostname( hostname );
 		WiFi.disconnect();
 
 		WiFi.mode( WiFiMode_t::WIFI_AP );
