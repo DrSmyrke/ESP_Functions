@@ -235,7 +235,7 @@ namespace esp {
 			WiFi.begin( ssid, skey );
 		}else{
 			ESP.restart();
-			return;
+			return false;
 		}
 
 		delay( 5000 );
