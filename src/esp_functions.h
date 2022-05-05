@@ -56,7 +56,7 @@ namespace esp {
 	 * checking STA or AP mode
 	 * @return none
 	 */
-	uint8_t isClient();
+	uint8_t isClient(void);
 	/**
 	 * read ssid and key for STA from spi fs
 	 * @param {char*} ssid
@@ -77,12 +77,36 @@ namespace esp {
 	 * checking Connections for AP from STA mode
 	 * @return none
 	 */
-	uint8_t isWiFiConnection();
+	uint8_t isWiFiConnection(void);
 	/**
 	 * get esp chip ID
 	 * @return {uint32_t} ID or 0 if unknown device
 	 */
-	uint32_t getMyID();
+	uint32_t getMyID(void);
+	/**
+	 * initialize wifi subsystem AP or STA
+	 * @param {char*} hostname
+	 * @param {IPAddress} ip
+	 * @param {IPAddress} gateway
+	 * @param {IPAddress} mask
+	 * @return {bool} true if correct
+	 */
+	bool wifi_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask);
+	/**
+	 * initialize wifi AP
+	 * @param {char*} hostname
+	 * @param {IPAddress} ip
+	 * @param {IPAddress} gateway
+	 * @param {IPAddress} mask
+	 * @return {bool} true if correct
+	 */
+	bool wifi_AP_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask);
+	/**
+	 * initialize wifi STA
+	 * @param {char*} hostname
+	 * @return {bool} true if correct
+	 */
+	bool wifi_STA_init(const char* hostname);
 }
 
 //-------------------------------------------------------------------------------

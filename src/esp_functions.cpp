@@ -100,7 +100,7 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	uint8_t isClient()
+	uint8_t isClient(void)
 	{
 #if defined(ARDUINO_ARCH_ESP8266)
 		return ( LittleFS.exists( ESP_STA_CONFIG_FILE ) ) ? 1 : 0;
@@ -167,7 +167,7 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	uint8_t isWiFiConnection()
+	uint8_t isWiFiConnection(void)
 	{
 		uint8_t state = 0;
 		if( WiFi.status() == WL_CONNECTED ){
@@ -177,7 +177,7 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	uint32_t getMyID()
+	uint32_t getMyID(void)
 	{
 		#if defined(ARDUINO_ARCH_AVR)
 			uint32_t _id =
@@ -196,8 +196,56 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
+	bool wifi_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
+	{
+		if( esp::isClient() ){
+			return wifi_STA_init( hostname );
+		}else{
+			return wifi_AP_init( hostname, ip, gateway, mask );
+		}
+	}
+
 	//-------------------------------------------------------------------------------
+	bool wifi_AP_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
+	{
+		WiFi.hostname( DEVICE_NAME );
+		WiFi.disconnect();
+
+		WiFi.mode( WiFiMode_t::WIFI_AP );
+		WiFi.softAPConfig( ip, gateway, mask );
+		bool res = WiFi.softAP( hostname, "1234567890" );
+
+		delay( 600 );
+
+		return res;
+	}
+
 	//-------------------------------------------------------------------------------
+	bool wifi_STA_init(const char* hostname)
+	{
+		char ssid[ ESP_CONFIG_SSID_MAX_LEN ];
+		char skey[ ESP_CONFIG_KEY_MAX_LEN ];
+
+		WiFi.hostname( hostname );
+		WiFi.softAPdisconnect( true );
+
+		WiFi.mode( WiFiMode_t::WIFI_STA );
+
+		if( esp::readSTAconfig( ssid, skey ) ){
+			WiFi.begin( ssid, skey );
+		}else{
+			ESP.restart();
+			return;
+		}
+
+		delay( 5000 );
+
+		if( !esp::isWiFiConnection() ){
+			delay( 1000 );
+			ESP.restart();
+		}
+	}
+
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
