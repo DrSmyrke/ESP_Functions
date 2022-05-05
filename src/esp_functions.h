@@ -107,6 +107,16 @@ namespace esp {
 	 * @return {bool} true if correct
 	 */
 	bool wifi_STA_init(const char* hostname);
+	/**
+	 * checking acces from web
+	 * @param {WebServer*} pointer
+	 * @return none
+	 */
+#if defined(ARDUINO_ARCH_ESP8266)
+	void setNoCacheContent(ESP8266WebServer *webServer);
+#elif defined(ARDUINO_ARCH_ESP32)
+	void setNoCacheContent(WebServer *webServer);
+#endif
 }
 
 //-------------------------------------------------------------------------------
