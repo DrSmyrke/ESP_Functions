@@ -23,6 +23,16 @@ namespace esp {
 		STA_MODE,
 		AP_MODE,
 	};
+	typedef struct {
+		unsigned char ap_mode: 1;
+		unsigned char captivePortalAccess: 1;
+	} Flags;
+	extern Flags flags;
+	extern int8_t countNetworks;
+	extern const char* pageTop;
+	extern const char* pageEndTop;
+	extern const char* pageBottom;
+	extern char* pageBuff;
 	/**
 	 * read ssid and key for AP from spi fs
 	 * @param {char*} ssid
@@ -116,6 +126,51 @@ namespace esp {
 	void setNoCacheContent(ESP8266WebServer *webServer);
 #elif defined(ARDUINO_ARCH_ESP32)
 	void setNoCacheContent(WebServer *webServer);
+#endif
+	/**
+	 * add web server default pages callback
+	 * @param {WebServer*} pointer
+	 * @param {bool} wifi config page (default: true)
+	 * @param {bool} not found page (default: true)
+	 * @param {HandlerFunction} hanler function to Captive portal page (default: nullptr)
+	 * @return none
+	 */
+#if defined(ARDUINO_ARCH_ESP8266)
+	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true, ESP8266WebServerTemplate<ServerType>::THandlerFunction cp_handler = nullptr);
+#elif defined(ARDUINO_ARCH_ESP32)
+	void addWebServerPages(WebServer *webServer, bool wifiConfig = true, bool notFound = true, WebServer::THandlerFunction cp_handler = nullptr);
+#endif
+	/**
+	 * web config page
+	 * @param {WebServer*} pointer
+	 * @return none
+	 */
+#if defined(ARDUINO_ARCH_ESP8266)
+	void handleWebConfigPage(ESP8266WebServer *webServer);
+#elif defined(ARDUINO_ARCH_ESP32)
+	void handleWebConfigPage(WebServer *webServer);
+#endif
+	/**
+	 * web not found page
+	 * @param {WebServer*} pointer
+	 * @return none
+	 */
+#if defined(ARDUINO_ARCH_ESP8266)
+	void handleWeb404Page(ESP8266WebServer *webServer);
+#elif defined(ARDUINO_ARCH_ESP32)
+	void handleWeb404Page(WebServer *webServer);
+#endif
+	/**
+	 * web send file to client or generate 404 error if file not found
+	 * @param {WebServer*} pointer
+	 * @param {char*} fileName
+	 * @param {char*} mimeType
+	 * @return none
+	 */
+#if defined(ARDUINO_ARCH_ESP8266)
+	uint8_t webSendFile(ESP8266WebServer *webServer, char* fileName, char* mimeType);
+#elif defined(ARDUINO_ARCH_ESP32)
+	uint8_t webSendFile(WebServer *webServer, char* fileName, char* mimeType);
 #endif
 }
 
