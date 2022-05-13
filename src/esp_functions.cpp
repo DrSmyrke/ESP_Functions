@@ -229,6 +229,8 @@ namespace esp {
 
 		delay( 600 );
 
+		esp::flags.ap_mode = 1;
+
 		return res;
 	}
 
@@ -257,6 +259,8 @@ namespace esp {
 			ESP.restart();
 			return false;
 		}
+
+		esp::flags.ap_mode = 0;
 
 		return true;
 	}
