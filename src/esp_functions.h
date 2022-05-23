@@ -136,7 +136,7 @@ namespace esp {
 	 * @return none
 	 */
 #if defined(ARDUINO_ARCH_ESP8266)
-	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true, ESP8266WebServerTemplate<ServerType>::THandlerFunction cp_handler = nullptr);
+	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true, ESP8266WebServer::THandlerFunction cp_handler = nullptr);
 #elif defined(ARDUINO_ARCH_ESP32)
 	void addWebServerPages(WebServer *webServer, bool wifiConfig = true, bool notFound = true, WebServer::THandlerFunction cp_handler = nullptr);
 #endif
