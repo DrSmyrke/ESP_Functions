@@ -223,9 +223,8 @@ namespace esp {
 		WiFi.disconnect();
 
 		WiFi.mode( WiFiMode_t::WIFI_AP );
-		bool res = WiFi.softAP( hostname, "1234567890" );
-		delay( 50 );
 		WiFi.softAPConfig( ip, gateway, mask );
+		bool res = WiFi.softAP( hostname, "1234567890" );
 
 		delay( 600 );
 
@@ -386,16 +385,26 @@ namespace esp {
 			return;
 		}
 
-		esp::pageBuff[ 0 ] = '\0';
-		if( esp::pageTop != nullptr ) strcpy( esp::pageBuff, esp::pageTop );
-		strcat( esp::pageBuff, "<title>Not found</title>" );
-		if( esp::pageEndTop != nullptr ) strcat( esp::pageBuff, esp::pageEndTop );
-		strcat( esp::pageBuff, "<h1>404 Not found</h1>" );
-		strcat( esp::pageBuff, webServer->header( "Location" ).c_str() );
-		strcat( esp::pageBuff, "<br>" );
-		strcat( esp::pageBuff, webServer->uri().c_str() );
-		if( esp::pageBottom != nullptr ) strcat( esp::pageBuff, esp::pageBottom );
-		webServer->send ( 200, "text/html", esp::pageBuff );
+		#if defined(ARDUINO_ARCH_ESP8266)
+		if( LittleFS.exists( ESP_STA_CONFIG_FILE ) ){	
+#elif defined(ARDUINO_ARCH_ESP32)
+		if( SPIFFS.exists( ESP_STA_CONFIG_FILE ) ){	
+#endif
+
+		}
+
+		if( !webSendFile( webServer, "/index.html", "text/html" ) ){
+			esp::pageBuff[ 0 ] = '\0';
+			if( esp::pageTop != nullptr ) strcpy( esp::pageBuff, esp::pageTop );
+			strcat( esp::pageBuff, "<title>Not found</title>" );
+			if( esp::pageEndTop != nullptr ) strcat( esp::pageBuff, esp::pageEndTop );
+			strcat( esp::pageBuff, "<h1>404 Not found</h1>" );
+			strcat( esp::pageBuff, webServer->header( "Location" ).c_str() );
+			strcat( esp::pageBuff, "<br>" );
+			strcat( esp::pageBuff, webServer->uri().c_str() );
+			if( esp::pageBottom != nullptr ) strcat( esp::pageBuff, esp::pageBottom );
+			webServer->send ( 200, "text/html", esp::pageBuff );
+		}
 	}
 
 	//-------------------------------------------------------------------------------
