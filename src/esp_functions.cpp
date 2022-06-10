@@ -400,9 +400,9 @@ namespace esp {
 
 	//-------------------------------------------------------------------------------
 	#if defined(ARDUINO_ARCH_ESP8266)
-	uint8_t webSendFile(ESP8266WebServer *webServer, char* fileName, char* mimeType)
+	uint8_t webSendFile(ESP8266WebServer *webServer, char* fileName, char* mimeType, const uint16_t code)
 #elif defined(ARDUINO_ARCH_ESP32)
-	uint8_t webSendFile(WebServer *webServer, char* fileName, char* mimeType)
+	uint8_t webSendFile(WebServer *webServer, char* fileName, char* mimeType, const uint16_t code)
 #endif
 	{
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -413,12 +413,12 @@ namespace esp {
 			File f = SPIFFS.open( fileName, "r");
 #endif
 			webServer->setContentLength(f.size());
-			webServer->send(200, mimeType, "");
+			webServer->send( code, mimeType, "" );
 			webServer->client().write(f);
 			f.close();
 			webServer->client().stop();
 		}else{
-			webServer->send(404, "text/html", "File not found :(");
+			webServer->send( ( code == 200 ) ? 404 : code, "text/html", "File not found :(");
 			return 0;
 		}
 

@@ -168,9 +168,9 @@ namespace esp {
 	 * @return none
 	 */
 #if defined(ARDUINO_ARCH_ESP8266)
-	uint8_t webSendFile(ESP8266WebServer *webServer, char* fileName, char* mimeType);
+	uint8_t webSendFile(ESP8266WebServer *webServer, char* fileName, char* mimeType, const uint16_t code = 200);
 #elif defined(ARDUINO_ARCH_ESP32)
-	uint8_t webSendFile(WebServer *webServer, char* fileName, char* mimeType);
+	uint8_t webSendFile(WebServer *webServer, char* fileName, char* mimeType, const uint16_t code = 200);
 #endif
 }
 
