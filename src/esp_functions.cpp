@@ -219,10 +219,10 @@ namespace esp {
 	{
 		esp::countNetworks = WiFi.scanNetworks();
 
-		WiFi.hostname( hostname );
 		WiFi.disconnect();
-
+		WiFi.hostname( hostname );
 		WiFi.mode( WiFiMode_t::WIFI_AP );
+		
 		WiFi.softAPConfig( ip, gateway, mask );
 		bool res = WiFi.softAP( hostname, "1234567890" );
 
@@ -239,9 +239,7 @@ namespace esp {
 		char ssid[ ESP_CONFIG_SSID_MAX_LEN ];
 		char skey[ ESP_CONFIG_KEY_MAX_LEN ];
 
-		WiFi.hostname( hostname );
 		WiFi.softAPdisconnect( true );
-
 		WiFi.mode( WiFiMode_t::WIFI_STA );
 
 		if( esp::readSTAconfig( ssid, skey ) ){
@@ -250,6 +248,8 @@ namespace esp {
 			ESP.restart();
 			return false;
 		}
+
+		WiFi.hostname( hostname );
 
 		delay( 5000 );
 
