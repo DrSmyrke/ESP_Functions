@@ -223,8 +223,9 @@ namespace esp {
 		WiFi.hostname( hostname );
 		WiFi.mode( WiFiMode_t::WIFI_AP );
 		
-		WiFi.softAPConfig( ip, gateway, mask );
+		
 		bool res = WiFi.softAP( hostname, "1234567890" );
+		WiFi.softAPConfig( ip, gateway, mask );
 
 		delay( 600 );
 
