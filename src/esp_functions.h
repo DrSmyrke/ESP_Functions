@@ -7,6 +7,8 @@
 #define ESP_AP_CONFIG_FILE						"/apConfig"
 #define ESP_CONFIG_SSID_MAX_LEN					32
 #define ESP_CONFIG_KEY_MAX_LEN					32
+#define ESP_FIRMWARE_FILENAME					"/firmware.bin"
+#define ESP_FIRMWARE_VERSION_FILENAME			"/version"
 
 //-------------------------------------------------------------------------------
 #include <stdint.h>
@@ -172,6 +174,13 @@ namespace esp {
 #elif defined(ARDUINO_ARCH_ESP32)
 	uint8_t webSendFile(WebServer *webServer, char* fileName, char* mimeType, const uint16_t code = 200);
 #endif
+	/**
+	 * Checking for updates 
+	 * @param {char*} repository url
+	 * @param {uint16_t} number of version
+	 * @return {uint32_t} available version number
+	 */
+	uint32_t checkingUpdate(const char *repoURL, const uint16_t version);
 }
 
 //-------------------------------------------------------------------------------
