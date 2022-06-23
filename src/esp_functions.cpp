@@ -27,6 +27,7 @@ namespace esp {
 		uint8_t ssidLen = 0;
 		uint8_t keyLen = 0;
 
+		if( esp::isFileExists( ESP_AP_CONFIG_FILE ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
 		if( LittleFS.exists( ESP_AP_CONFIG_FILE ) ){	
 			File f = LittleFS.open( ESP_AP_CONFIG_FILE, "r");
@@ -112,11 +113,7 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	uint8_t isClient(void)
 	{
-#if defined(ARDUINO_ARCH_ESP8266)
-		return ( LittleFS.exists( ESP_STA_CONFIG_FILE ) ) ? 1 : 0;
-#elif defined(ARDUINO_ARCH_ESP32)
-		return ( SPIFFS.exists( ESP_STA_CONFIG_FILE ) ) ? 1 : 0;
-#endif
+		return esp::isFileExists( ESP_STA_CONFIG_FILE ) ? 1 : 0;
 	}
 
 	//-------------------------------------------------------------------------------
@@ -392,14 +389,6 @@ namespace esp {
 			return;
 		}
 
-		#if defined(ARDUINO_ARCH_ESP8266)
-		if( LittleFS.exists( ESP_STA_CONFIG_FILE ) ){	
-#elif defined(ARDUINO_ARCH_ESP32)
-		if( SPIFFS.exists( ESP_STA_CONFIG_FILE ) ){	
-#endif
-
-		}
-
 		if( !webSendFile( webServer, "/index.html", "text/html" ) ){
 			esp::pageBuff[ 0 ] = '\0';
 			if( esp::pageTop != nullptr ) strcpy( esp::pageBuff, esp::pageTop );
@@ -421,11 +410,10 @@ namespace esp {
 	uint8_t webSendFile(WebServer *webServer, char* fileName, char* mimeType, const uint16_t code)
 #endif
 	{
+		if( esp::isFileExists( fileName ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
-		if( LittleFS.exists( fileName ) ){	
 			File f = LittleFS.open( fileName, "r");
 #elif defined(ARDUINO_ARCH_ESP32)
-		if( SPIFFS.exists( fileName ) ){	
 			File f = SPIFFS.open( fileName, "r");
 #endif
 			webServer->setContentLength(f.size());
@@ -462,6 +450,19 @@ namespace esp {
 		return res;
 	}
 
+	//-------------------------------------------------------------------------------
+	bool isFileExists(const char *filepath)
+	{
+#if defined(ARDUINO_ARCH_ESP8266)
+		return LittleFS.exists( filepath );
+#elif defined(ARDUINO_ARCH_ESP32)
+		return SPIFFS.exists( filepath );
+#endif
+	}
+
+	//-------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
 }

@@ -181,6 +181,12 @@ namespace esp {
 	 * @return {uint32_t} available version number
 	 */
 	uint32_t checkingUpdate(const char *repoURL, const uint16_t version);
+	/**
+	 * Checking file in memory 
+	 * @param {char*} file path
+	 * @return {bool} available version number
+	 */
+	bool isFileExists(const char *filepath);
 }
 
 //-------------------------------------------------------------------------------
