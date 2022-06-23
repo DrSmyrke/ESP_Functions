@@ -527,7 +527,7 @@ namespace esp {
 #endif
 
 		pageTop = "<!DOCTYPE HTML><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta charset=\"utf-8\"/><script type=\"text/javascript\" src=\"/index.js\"></script><link rel=\"stylesheet\" type=\"text/css\" href=\"/index.css\"/>";
-		pageEndTop = "</head><body><hr size=\"1\">"
+		pageEndTop = "</head><body><hr size=\"1\">";
 		pageBottom = "<hr size=\"1\" class=\"red\"></body></html>";
 	}
 
