@@ -225,7 +225,11 @@ namespace esp {
 		
 		
 		bool res = WiFi.softAP( hostname, "1234567890" );
+#if defined(ARDUINO_ARCH_ESP8266)
+	
+#elif defined(ARDUINO_ARCH_ESP32)
 		WiFi.softAPConfig( ip, gateway, mask );
+#endif
 
 		delay( 600 );
 
