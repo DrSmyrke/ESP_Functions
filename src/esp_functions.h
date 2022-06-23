@@ -134,13 +134,14 @@ namespace esp {
 	 * @param {WebServer*} pointer
 	 * @param {bool} wifi config page (default: true)
 	 * @param {bool} not found page (default: true)
+	 * @param {bool} captive portal alorythm (default: false)
 	 * @param {HandlerFunction} hanler function to Captive portal page (default: nullptr)
 	 * @return none
 	 */
 #if defined(ARDUINO_ARCH_ESP8266)
-	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true, ESP8266WebServer::THandlerFunction cp_handler = nullptr);
+	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, ESP8266WebServer::THandlerFunction cp_handler = nullptr);
 #elif defined(ARDUINO_ARCH_ESP32)
-	void addWebServerPages(WebServer *webServer, bool wifiConfig = true, bool notFound = true, WebServer::THandlerFunction cp_handler = nullptr);
+	void addWebServerPages(WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, WebServer::THandlerFunction cp_handler = nullptr);
 #endif
 	/**
 	 * web config page

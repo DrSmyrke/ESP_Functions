@@ -29,10 +29,8 @@ namespace esp {
 
 		if( esp::isFileExists( ESP_AP_CONFIG_FILE ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
-		if( LittleFS.exists( ESP_AP_CONFIG_FILE ) ){	
 			File f = LittleFS.open( ESP_AP_CONFIG_FILE, "r");
 #elif defined(ARDUINO_ARCH_ESP32)
-		if( SPIFFS.exists( ESP_AP_CONFIG_FILE ) ){	
 			File f = SPIFFS.open( ESP_AP_CONFIG_FILE, "r");
 #endif
 			if( f ){
@@ -282,9 +280,9 @@ namespace esp {
 
 	//-------------------------------------------------------------------------------
 #if defined(ARDUINO_ARCH_ESP8266)
-	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig, bool notFound, ESP8266WebServer::THandlerFunction cp_handler)
+	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig, bool notFound, bool captivePortal, ESP8266WebServer::THandlerFunction cp_handler)
 #elif defined(ARDUINO_ARCH_ESP32)
-	void addWebServerPages(WebServer *webServer, bool wifiConfig, bool notFound, WebServer::THandlerFunction cp_handler)
+	void addWebServerPages(WebServer *webServer, bool wifiConfig, bool notFound, bool captivePortal, WebServer::THandlerFunction cp_handler)
 #endif
 	{
 		if( wifiConfig ){
@@ -297,6 +295,41 @@ namespace esp {
 				esp::handleWeb404Page( webServer );
 			} );
 		}
+
+		webServer->on( "/favicon.ico", [ webServer, captivePortal, cp_handler ](void){
+			if( esp::flags.ap_mode && captivePortal ){
+				//------------------------------------------------------------------------
+				if( webServer->hasArg( "getAccess" ) ) esp::flags.captivePortalAccess = 1;
+				//------------------------------------------------------------------------
+				if( pageBuff == nullptr ){
+					webServer->send ( ( !esp::flags.captivePortalAccess ) ? 200 : 204, "text/html", "pageBuff is nullptr" );
+					return;
+				}
+
+				if( esp::pageTop != nullptr ) strcpy( esp::pageBuff, esp::pageTop );
+				strcat( esp::pageBuff, "<title>Captive portal</title>" );
+				if( esp::pageEndTop != nullptr ) strcat( esp::pageBuff, esp::pageEndTop );
+				strcat( esp::pageBuff, "<h1>ESP Captive portal</h1>" );
+				strcat( esp::pageBuff, "<br>" );
+				strcat( esp::pageBuff, webServer->header( "Location" ).c_str() );
+				strcat( esp::pageBuff, "<br>" );
+				strcat( esp::pageBuff, webServer->uri().c_str() );
+				strcat( esp::pageBuff, "<br>" );
+				if( cp_handler != nullptr ) cp_handler();
+				if( esp::pageBottom != nullptr ) strcat( esp::pageBuff, esp::pageBottom );
+
+				webServer->send ( ( !esp::flags.captivePortalAccess ) ? 200 : 204, "text/html", esp::pageBuff );
+			}else{
+				esp::webSendFile( webServer, "/favicon.ico", "image/x-icon" );
+			}
+		} );
+		
+		webServer->on( "/index.css", [ webServer ](void){
+			esp::webSendFile( webServer, "/index.css", "text/css" );
+		} );
+		webServer->on( "/index.js", [ webServer ](void){
+			esp::webSendFile( webServer, "/index.js", "text/javascript" );
+		} );
 
 		if( cp_handler != nullptr ){
 			webServer->on( "/fwlink", cp_handler );
