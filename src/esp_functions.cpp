@@ -1,6 +1,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "esp_functions.h"
-
+#include <HTTPClient.h>
 
 #if defined(ARDUINO_ARCH_ESP8266)
 	#include <LittleFS.h>
@@ -440,6 +440,21 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
+	uint32_t checkingUpdate(const char *repoURL, const uint16_t version)
+	{
+		uint32_t res = 0;
+		HTTPClient http;
+		http.begin( String( repoURL ) + String( ESP_FIRMWARE_VERSION_FILENAME ) );
+		int httpCode = http.GET();
+		String payload = http.getString();
+
+		if( httpCode == HTTP_CODE_OK ){
+			res = payload.toInt();
+		}
+
+		return res;
+	}
+
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
 }
