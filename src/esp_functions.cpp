@@ -1,11 +1,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "esp_functions.h"
-#include <HTTPClient.h>
 
 #if defined(ARDUINO_ARCH_ESP8266)
 	#include <LittleFS.h>
+	#include <ESP8266HTTPClient.h>
+	#include <WiFiClient.h>
 #elif defined(ARDUINO_ARCH_ESP32)
 	#include <SPIFFS.h>
+	#include <HTTPClient.h>
 #endif
 
 //-------------------------------------------------------------------------------
@@ -444,7 +446,12 @@ namespace esp {
 	{
 		uint32_t res = 0;
 		HTTPClient http;
+#if defined(ARDUINO_ARCH_ESP8266)
+		WiFiClient client;
+		http.begin( client, String( repoURL ) + String( ESP_FIRMWARE_VERSION_FILENAME ) );
+#elif defined(ARDUINO_ARCH_ESP32)
 		http.begin( String( repoURL ) + String( ESP_FIRMWARE_VERSION_FILENAME ) );
+#endif
 		int httpCode = http.GET();
 		String payload = http.getString();
 
