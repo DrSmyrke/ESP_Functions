@@ -188,6 +188,17 @@ namespace esp {
 	 * @return {bool} available version number
 	 */
 	bool isFileExists(const char *filepath);
+	/**
+	 * Printing all files in memory
+	 * @param {HardwareSerial} Serial object
+	 * @return {none}
+	 */
+	void printAllFiles(HardwareSerial &SerialPort);
+	/**
+	 * Initialize for library methods
+	 * @return {none}
+	 */
+	void init(void);
 }
 
 //-------------------------------------------------------------------------------

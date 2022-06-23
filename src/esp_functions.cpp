@@ -494,7 +494,39 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
+	void printAllFiles(HardwareSerial &SerialPort)
+	{
+#if defined(ARDUINO_ARCH_ESP8266)
+		Dir root = LittleFS.openDir( "/" );
+		while( root.next() ){
+			File file = root.openFile("r");
+			SerialPort.print( ": " );
+			SerialPort.println( root.fileName() );
+			file.close();
+		}
+#elif defined(ARDUINO_ARCH_ESP32)
+		Dir root = SPIFFS.openDir( "/" );
+		while( root.next() ){
+			File file = root.openFile("r");
+			SerialPort.print( ": " );
+			SerialPort.println( root.fileName() );
+			file.close();
+		}
+#endif
+	}
+
 	//-------------------------------------------------------------------------------
+	void init(void)
+	{
+#if defined(ARDUINO_ARCH_ESP8266)
+		LittleFS.begin();
+		delay( 700 );
+#elif defined(ARDUINO_ARCH_ESP32)
+		SPIFFS.begin();
+		delay( 700 );
+#endif
+	}
+
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
