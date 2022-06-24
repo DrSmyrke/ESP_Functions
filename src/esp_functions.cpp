@@ -505,12 +505,12 @@ namespace esp {
 			file.close();
 		}
 #elif defined(ARDUINO_ARCH_ESP32)
-		Dir root = SPIFFS.openDir( "/" );
-		while( root.next() ){
-			File file = root.openFile("r");
+		File root = SPIFFS.open( "/" );
+		File file = root.openNextFile();
+		while( file ){
 			SerialPort.print( ": " );
-			SerialPort.println( root.fileName() );
-			file.close();
+			SerialPort.println( file.name() );
+			file = root.openNextFile();
 		}
 #endif
 	}
