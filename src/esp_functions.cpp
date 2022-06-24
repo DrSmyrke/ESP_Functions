@@ -476,11 +476,12 @@ namespace esp {
 		http.begin( String( repoURL ) + String( ESP_FIRMWARE_VERSION_FILENAME ) );
 #endif
 		int httpCode = http.GET();
-		String payload = http.getString();
-
+		
 		if( httpCode == HTTP_CODE_OK ){
-			res = payload.toInt();
+			res = http.getString().toInt();
 		}
+
+		http.end();
 
 		return res;
 	}
@@ -497,7 +498,7 @@ namespace esp {
 		http.begin( String( repoURL ) + String( file ) );
 #endif
 		int httpCode = http.GET();
-		if( httpCode == HTTP_CODE_OK ){
+		if( httpCode == HTTP_CODE_OK ){		
 #if defined(ARDUINO_ARCH_ESP8266)
 			File f = LittleFS.open( file, "w");
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -509,7 +510,21 @@ namespace esp {
 #elif defined(ARDUINO_ARCH_ESP32)
 
 #endif
-				http.writeToStream( &f );
+				WiFiClient* stream = http.getStreamPtr();
+				uint8_t buff[ 128 ] = { 0 };
+				int totalLength = http.getSize();
+				int len = totalLength;
+				while( http.connected() && ( len > 0 || len == -1 ) ){
+					size_t size = stream->available();
+					if( size ){
+						int c = stream->readBytes( buff, ((size > sizeof(buff)) ? sizeof(buff) : size) );
+						f.write( buff, c );
+						if( len > 0 ) len -= c;
+					}
+					delay(1);
+				}
+
+				// http.writeToStream( &f );
 				res = 1;
 			}else{
 #if defined(ARDUINO_ARCH_ESP8266)
