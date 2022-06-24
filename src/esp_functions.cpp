@@ -525,6 +525,11 @@ namespace esp {
 		SPIFFS.begin();
 		delay( 700 );
 #endif
+		esp::flags.ap_mode							= 0;
+		esp::flags.captivePortalAccess				= 0;
+		esp::flags.autoUpdate						= 0;
+
+		if( esp::isFileExists( ESP_AUTOUPDATE_FILENAME ) ) esp::flags.autoUpdate = 1;
 
 		pageTop = "<!DOCTYPE HTML><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta charset=\"utf-8\"/><script type=\"text/javascript\" src=\"/index.js\"></script><link rel=\"stylesheet\" type=\"text/css\" href=\"/index.css\"/>";
 		pageEndTop = "</head><body><hr size=\"1\">";

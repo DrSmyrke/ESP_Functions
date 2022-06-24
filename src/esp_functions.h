@@ -8,6 +8,7 @@
 #define ESP_CONFIG_SSID_MAX_LEN					32
 #define ESP_CONFIG_KEY_MAX_LEN					32
 #define ESP_FIRMWARE_FILENAME					"/firmware.bin"
+#define ESP_AUTOUPDATE_FILENAME					"/autoupdate"
 #define ESP_FIRMWARE_VERSION_FILENAME			"/version"
 
 //-------------------------------------------------------------------------------
@@ -28,6 +29,7 @@ namespace esp {
 	typedef struct {
 		unsigned char ap_mode: 1;
 		unsigned char captivePortalAccess: 1;
+		unsigned char autoUpdate: 1;
 	} Flags;
 	extern Flags flags;
 	extern int8_t countNetworks;
