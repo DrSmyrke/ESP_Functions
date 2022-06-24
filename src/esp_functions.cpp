@@ -491,19 +491,19 @@ namespace esp {
 		uint8_t res = 0;
 		HTTPClient http;
 #if defined(ARDUINO_ARCH_ESP8266)
-		File f = LittleFS.open( file, "w");
+		WiFiClient client;
+		http.begin( client, String( repoURL ) + String( file ) );
 #elif defined(ARDUINO_ARCH_ESP32)
-		File f = SPIFFS.open( file, "w");
+		http.begin( String( repoURL ) + String( file ) );
 #endif
-		if( f ){
+		int httpCode = http.GET();
+		if( httpCode == HTTP_CODE_OK ){
 #if defined(ARDUINO_ARCH_ESP8266)
-			WiFiClient client;
-			http.begin( client, String( repoURL ) + String( file ) );
+			File f = LittleFS.open( file, "w");
 #elif defined(ARDUINO_ARCH_ESP32)
-			http.begin( String( repoURL ) + String( file ) );
+			File f = SPIFFS.open( file, "w");
 #endif
-			int httpCode = http.GET();
-			if( httpCode == HTTP_CODE_OK ){
+			if( f ){
 #if defined(ARDUINO_ARCH_ESP8266)
 				DEBUG_WIFI( "%s:%d[HTTP] Downloading [%s%s]...\n", __FILE__, __LINE__, repoURL, file );
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -513,14 +513,14 @@ namespace esp {
 				res = 1;
 			}else{
 #if defined(ARDUINO_ARCH_ESP8266)
-				DEBUG_WIFI( "%s:%d[HTTP] GET... failed, error: %s\n", __FILE__, __LINE__, http.errorToString( httpCode ).c_str() );
+				DEBUG_WIFI( "%s:%d failed to open %s\n", __FILE__, __LINE__, file );
 #elif defined(ARDUINO_ARCH_ESP32)
 
 #endif
 			}
 		}else{
 #if defined(ARDUINO_ARCH_ESP8266)
-			DEBUG_WIFI( "%s:%d failed to open %s\n", __FILE__, __LINE__, file );
+			DEBUG_WIFI( "%s:%d[HTTP] GET... failed, error: %s\n", __FILE__, __LINE__, http.errorToString( httpCode ).c_str() );
 #elif defined(ARDUINO_ARCH_ESP32)
 
 #endif
