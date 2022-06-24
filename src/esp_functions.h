@@ -192,6 +192,11 @@ namespace esp {
 	 */
 	uint8_t downloadUpdate(const char *repoURL, const char *file);
 	/**
+	 * Update firmware from FS
+	 * @return {uint8_t} 0 if error, 1 if success
+	 */
+	uint8_t updateFromFS(void);
+	/**
 	 * Checking file in memory 
 	 * @param {char*} file path
 	 * @return {bool} available version number

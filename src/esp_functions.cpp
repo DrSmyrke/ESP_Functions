@@ -11,6 +11,8 @@
 	#include <HTTPClient.h>
 #endif
 
+#include <Update.h>
+
 //-------------------------------------------------------------------------------
 namespace esp {
 	//-------------------------------------------------------------------------------
@@ -508,6 +510,7 @@ namespace esp {
 
 #endif
 				http.writeToStream( &f );
+				res = 1;
 			}else{
 #if defined(ARDUINO_ARCH_ESP8266)
 				DEBUG_WIFI( "%s:%d[HTTP] GET... failed, error: %s\n", __FILE__, __LINE__, http.errorToString( httpCode ).c_str() );
@@ -522,6 +525,101 @@ namespace esp {
 
 #endif
 		}
+		http.end();
+		return res;
+	}
+
+	//-------------------------------------------------------------------------------
+	uint8_t updateFromFS(void)
+	{
+		uint8_t res = 0;
+
+		if( esp::isFileExists( ESP_FIRMWARE_FILENAME ) ){
+#if defined(ARDUINO_ARCH_ESP8266)
+			File f = LittleFS.open( ESP_FIRMWARE_FILENAME, "r");
+#elif defined(ARDUINO_ARCH_ESP32)
+			File f = SPIFFS.open( ESP_FIRMWARE_FILENAME, "r");
+#endif
+			if( f ){
+				if( f.isDirectory() ){
+#if defined(ARDUINO_ARCH_ESP8266)
+					DEBUG_WIFI( "%s:%d Error, %s is not a file\n", __FILE__, __LINE__, ESP_FIRMWARE_FILENAME );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+					f.close();
+					return res;
+				}
+
+				size_t fileSize = f.size();
+				if( fileSize > 0 ){
+#if defined(ARDUINO_ARCH_ESP8266)
+					DEBUG_WIFI( "%s:%d Trying to start update\n", __FILE__, __LINE__ );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+					if( Update.begin( fileSize ) ){
+						size_t written = Update.writeStream( f );
+						if( written == fileSize ){
+#if defined(ARDUINO_ARCH_ESP8266)
+							DEBUG_WIFI( "%s:%d Written : %d successfully\n", __FILE__, __LINE__, written );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+						}else{
+#if defined(ARDUINO_ARCH_ESP8266)
+							DEBUG_WIFI( "%s:%d Written only: %d / %d. Retry?\n", __FILE__, __LINE__, written, fileSize );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+						}
+
+						if( Update.end() ){
+#if defined(ARDUINO_ARCH_ESP8266)
+							DEBUG_WIFI( "%s:%d OTA done!?\n", __FILE__, __LINE__ );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+							if( !Update.isFinished() ){
+#if defined(ARDUINO_ARCH_ESP8266)
+								DEBUG_WIFI( "%s:%d Update not finished? Something went wrong!\n", __FILE__, __LINE__ );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+							}else{
+								res = 1;
+							}
+						}else{
+#if defined(ARDUINO_ARCH_ESP8266)
+							DEBUG_WIFI( "%s:%d Error Occurred. Error #: %s\n", __FILE__, __LINE__, Update.getError().c_str() );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+						}
+					}else{
+#if defined(ARDUINO_ARCH_ESP8266)
+							DEBUG_WIFI( "%s:%d Not enough space to begin OTA\n", __FILE__, __LINE__ );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+					}
+				}else{
+#if defined(ARDUINO_ARCH_ESP8266)
+					DEBUG_WIFI( "%s:%d Error, file is empty\n", __FILE__, __LINE__ );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+				}
+				f.close();
+			}
+		}else{
+#if defined(ARDUINO_ARCH_ESP8266)
+			DEBUG_WIFI( "%s:%d Could not load %s from spiffs root\n", __FILE__, __LINE__, ESP_FIRMWARE_FILENAME );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
+		}
+
 		return res;
 	}
 
