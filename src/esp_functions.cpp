@@ -121,11 +121,10 @@ namespace esp {
 		uint8_t ssidLen = 0;
 		uint8_t keyLen = 0;
 
+		if( esp::isFileExists( ESP_STA_CONFIG_FILE ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
-		if( LittleFS.exists( ESP_STA_CONFIG_FILE ) ){	
 			File f = LittleFS.open( ESP_STA_CONFIG_FILE, "r");
 #elif defined(ARDUINO_ARCH_ESP32)
-		if( SPIFFS.exists( ESP_STA_CONFIG_FILE ) ){	
 			File f = SPIFFS.open( ESP_STA_CONFIG_FILE, "r");
 #endif
 			if( f ){
@@ -480,6 +479,36 @@ namespace esp {
 			res = payload.toInt();
 		}
 
+		return res;
+	}
+
+	//-------------------------------------------------------------------------------
+	uint8_t downloadUpdate(const char *repoURL, const char *file)
+	{
+		uint8_t res = 0;
+		HTTPClient http;
+#if defined(ARDUINO_ARCH_ESP8266)
+		File f = LittleFS.open( file, "w");
+#elif defined(ARDUINO_ARCH_ESP32)
+		File f = SPIFFS.open( file, "w");
+#endif
+		if( f ){
+#if defined(ARDUINO_ARCH_ESP8266)
+			WiFiClient client;
+			http.begin( client, String( repoURL ) + String( file ) );
+#elif defined(ARDUINO_ARCH_ESP32)
+			http.begin( String( repoURL ) + String( file ) );
+#endif
+			int httpCode = http.GET();
+			if( httpCode == HTTP_CODE_OK ){
+				DEBUG_WIFI( "%s:%d[HTTP] Downloading [%s%s]...\n", __FILE__, __LINE__, repoURL, file );
+				http.writeToStream( &f );
+			}else{
+				DEBUG_WIFI( "%s:%d[HTTP] GET... failed, error: %s\n", __FILE__, __LINE__, http.errorToString( httpCode ).c_str() );
+			}
+		}else{
+			DEBUG_WIFI( "%s:%d failed to open %s\n", __FILE__, __LINE__, file );
+		}
 		return res;
 	}
 

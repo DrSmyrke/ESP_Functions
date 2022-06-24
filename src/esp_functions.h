@@ -179,11 +179,18 @@ namespace esp {
 #endif
 	/**
 	 * Checking for updates 
-	 * @param {char*} repository url
+	 * @param {char*} repository url (http://example.com/folder)
 	 * @param {uint16_t} number of version
 	 * @return {uint32_t} available version number
 	 */
 	uint32_t checkingUpdate(const char *repoURL, const uint16_t version);
+	/**
+	 * Download new files
+	 * @param {char*} repository url (http://example.com/folder)
+	 * @param {char*} file (/firmware.bin)
+	 * @return {uint8_t} 0 if error, 1 if success
+	 */
+	uint8_t downloadUpdate(const char *repoURL, const char *file);
 	/**
 	 * Checking file in memory 
 	 * @param {char*} file path
