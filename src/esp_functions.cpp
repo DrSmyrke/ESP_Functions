@@ -3,6 +3,7 @@
 
 #if defined(ARDUINO_ARCH_ESP8266)
 	#include <LittleFS.h>
+	#include <ESP8266WiFi.h>
 	#include <ESP8266HTTPClient.h>
 	#include <WiFiClient.h>
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -501,13 +502,25 @@ namespace esp {
 #endif
 			int httpCode = http.GET();
 			if( httpCode == HTTP_CODE_OK ){
+#if defined(ARDUINO_ARCH_ESP8266)
 				DEBUG_WIFI( "%s:%d[HTTP] Downloading [%s%s]...\n", __FILE__, __LINE__, repoURL, file );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
 				http.writeToStream( &f );
 			}else{
+#if defined(ARDUINO_ARCH_ESP8266)
 				DEBUG_WIFI( "%s:%d[HTTP] GET... failed, error: %s\n", __FILE__, __LINE__, http.errorToString( httpCode ).c_str() );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
 			}
 		}else{
+#if defined(ARDUINO_ARCH_ESP8266)
 			DEBUG_WIFI( "%s:%d failed to open %s\n", __FILE__, __LINE__, file );
+#elif defined(ARDUINO_ARCH_ESP32)
+
+#endif
 		}
 		return res;
 	}
