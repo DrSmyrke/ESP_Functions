@@ -9,9 +9,8 @@
 #elif defined(ARDUINO_ARCH_ESP32)
 	#include <SPIFFS.h>
 	#include <HTTPClient.h>
+	#include <Update.h>
 #endif
-
-#include <Update.h>
 
 //-------------------------------------------------------------------------------
 namespace esp {
