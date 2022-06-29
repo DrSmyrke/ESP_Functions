@@ -224,6 +224,11 @@ namespace esp {
 	 * @return {none}
 	 */
 	void init(void);
+	/**
+	 * Change MAC (!!! use after Connection initialize)
+	 * @return {none}
+	 */
+	void changeMAC(const uint8_t *mac);
 }
 
 //-------------------------------------------------------------------------------
