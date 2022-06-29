@@ -568,7 +568,11 @@ namespace esp {
 								res = 1;
 							}
 						}else{
+#if defined(ARDUINO_ARCH_ESP8266)
+							ESP_DEBUG( "%s:%d Error Occurred. Error #: %d\n", __FILE__, __LINE__, Update.getError() );
+#elif defined(ARDUINO_ARCH_ESP32)
 							ESP_DEBUG( "%s:%d Error Occurred. Error #: %s\n", __FILE__, __LINE__, Update.getError().c_str() );
+#endif
 						}
 					}else{
 							ESP_DEBUG( "%s:%d Not enough space to begin OTA\n", __FILE__, __LINE__ );
