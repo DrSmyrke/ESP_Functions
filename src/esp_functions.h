@@ -21,16 +21,14 @@
 #endif
 
 //-------------------------------------------------------------------------------
-#ifdef DEBUG_ESP_WIFI
+#ifdef DEBUG_ESP
 	#ifdef DEBUG_ESP_PORT
 		#define ESP_DEBUG(fmt, ...) DEBUG_ESP_PORT.printf_P( (PGM_P)PSTR(fmt), ##__VA_ARGS__ )
 	#endif
-#endif
-
-#ifndef DEBUG_WIFI
-	//#define ESP_DEBUG(...) do { (void)0; } while (0)
+#else
 	#define ESP_DEBUG(...) asm("nop")
 #endif
+
 //-------------------------------------------------------------------------------
 namespace esp {
 	enum{
