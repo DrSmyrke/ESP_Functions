@@ -504,11 +504,7 @@ namespace esp {
 			File f = SPIFFS.open( file, "w");
 #endif
 			if( f ){
-#if defined(ARDUINO_ARCH_ESP8266)
-				DEBUG_WIFI( "%s:%d[HTTP] Downloading [%s%s]...\n", __FILE__, __LINE__, repoURL, file );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+				ESP_DEBUG( "%s:%d[HTTP] Downloading [%s%s]...\n", __FILE__, __LINE__, repoURL, file );
 				WiFiClient* stream = http.getStreamPtr();
 				uint8_t buff[ 128 ] = { 0 };
 				int totalLength = http.getSize();
@@ -526,18 +522,10 @@ namespace esp {
 				// http.writeToStream( &f );
 				res = 1;
 			}else{
-#if defined(ARDUINO_ARCH_ESP8266)
-				DEBUG_WIFI( "%s:%d failed to open %s\n", __FILE__, __LINE__, file );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+				ESP_DEBUG( "%s:%d failed to open %s\n", __FILE__, __LINE__, file );
 			}
 		}else{
-#if defined(ARDUINO_ARCH_ESP8266)
-			DEBUG_WIFI( "%s:%d[HTTP] GET... failed, error: %s\n", __FILE__, __LINE__, http.errorToString( httpCode ).c_str() );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+			ESP_DEBUG( "%s:%d[HTTP] GET... failed, error: %s\n", __FILE__, __LINE__, http.errorToString( httpCode ).c_str() );
 		}
 		http.end();
 		return res;
@@ -556,82 +544,42 @@ namespace esp {
 #endif
 			if( f ){
 				if( f.isDirectory() ){
-#if defined(ARDUINO_ARCH_ESP8266)
-					DEBUG_WIFI( "%s:%d Error, %s is not a file\n", __FILE__, __LINE__, ESP_FIRMWARE_FILENAME );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+					ESP_DEBUG( "%s:%d Error, %s is not a file\n", __FILE__, __LINE__, ESP_FIRMWARE_FILENAME );
 					f.close();
 					return res;
 				}
 
 				size_t fileSize = f.size();
 				if( fileSize > 0 ){
-#if defined(ARDUINO_ARCH_ESP8266)
-					DEBUG_WIFI( "%s:%d Trying to start update\n", __FILE__, __LINE__ );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+					ESP_DEBUG( "%s:%d Trying to start update\n", __FILE__, __LINE__ );
 					if( Update.begin( fileSize ) ){
 						size_t written = Update.writeStream( f );
 						if( written == fileSize ){
-#if defined(ARDUINO_ARCH_ESP8266)
-							DEBUG_WIFI( "%s:%d Written : %d successfully\n", __FILE__, __LINE__, written );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+							ESP_DEBUG( "%s:%d Written : %d successfully\n", __FILE__, __LINE__, written );
 						}else{
-#if defined(ARDUINO_ARCH_ESP8266)
-							DEBUG_WIFI( "%s:%d Written only: %d / %d. Retry?\n", __FILE__, __LINE__, written, fileSize );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+							ESP_DEBUG( "%s:%d Written only: %d / %d. Retry?\n", __FILE__, __LINE__, written, fileSize );
 						}
 
 						if( Update.end() ){
-#if defined(ARDUINO_ARCH_ESP8266)
-							DEBUG_WIFI( "%s:%d OTA done!?\n", __FILE__, __LINE__ );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+							ESP_DEBUG( "%s:%d OTA done!?\n", __FILE__, __LINE__ );
 							if( !Update.isFinished() ){
-#if defined(ARDUINO_ARCH_ESP8266)
-								DEBUG_WIFI( "%s:%d Update not finished? Something went wrong!\n", __FILE__, __LINE__ );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+								ESP_DEBUG( "%s:%d Update not finished? Something went wrong!\n", __FILE__, __LINE__ );
 							}else{
 								res = 1;
 							}
 						}else{
-#if defined(ARDUINO_ARCH_ESP8266)
-							DEBUG_WIFI( "%s:%d Error Occurred. Error #: %s\n", __FILE__, __LINE__, Update.getError().c_str() );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+							ESP_DEBUG( "%s:%d Error Occurred. Error #: %s\n", __FILE__, __LINE__, Update.getError().c_str() );
 						}
 					}else{
-#if defined(ARDUINO_ARCH_ESP8266)
-							DEBUG_WIFI( "%s:%d Not enough space to begin OTA\n", __FILE__, __LINE__ );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+							ESP_DEBUG( "%s:%d Not enough space to begin OTA\n", __FILE__, __LINE__ );
 					}
 				}else{
-#if defined(ARDUINO_ARCH_ESP8266)
-					DEBUG_WIFI( "%s:%d Error, file is empty\n", __FILE__, __LINE__ );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+					ESP_DEBUG( "%s:%d Error, file is empty\n", __FILE__, __LINE__ );
 				}
 				f.close();
 			}
 		}else{
-#if defined(ARDUINO_ARCH_ESP8266)
-			DEBUG_WIFI( "%s:%d Could not load %s from spiffs root\n", __FILE__, __LINE__, ESP_FIRMWARE_FILENAME );
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#endif
+			ESP_DEBUG( "%s:%d Could not load %s from spiffs root\n", __FILE__, __LINE__, ESP_FIRMWARE_FILENAME );
 		}
 
 		return res;
