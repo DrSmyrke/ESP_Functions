@@ -254,10 +254,15 @@ namespace esp {
 
 		WiFi.hostname( hostname );
 
-		delay( 5000 );
-
+		ESP_DEBUG( "WiFi connecting...\n" );
+		uint8_t i = 0;
+		while( !WiFi.isConnected() && i++ < 50 ){
+			delay( 100 );
+			ESP_DEBUG( "." );
+		}
+		ESP_DEBUG( "\n" );
+		
 		if( !esp::isWiFiConnection() ){
-			delay( 1000 );
 			ESP.restart();
 			return false;
 		}
