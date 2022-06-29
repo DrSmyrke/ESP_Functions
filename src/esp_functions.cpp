@@ -651,7 +651,7 @@ namespace esp {
 	void changeMAC(const uint8_t *mac)
 	{
 		ESP_DEBUG( "OLD ESP MAC: %s\n", WiFi.macAddress().c_str() );
-		wifi_set_macaddr( 0, mac );
+		wifi_set_macaddr( 0, const_cast<uint8*>mac );
 		ESP_DEBUG( "NEW ESP MAC: %s\n", WiFi.macAddress().c_str() );
 	}
 
