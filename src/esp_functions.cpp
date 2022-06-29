@@ -239,6 +239,8 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	bool wifi_STA_init(const char* hostname)
 	{
+		ESP_DEBUG( "STA MODE INIT...\n" );
+
 		char ssid[ ESP_CONFIG_SSID_MAX_LEN ];
 		char skey[ ESP_CONFIG_KEY_MAX_LEN ];
 
@@ -246,6 +248,7 @@ namespace esp {
 		WiFi.mode( WiFiMode_t::WIFI_STA );
 
 		if( esp::readSTAconfig( ssid, skey ) ){
+			ESP_DEBUG( "Connect to %s\n", ssid );
 			WiFi.begin( ssid, skey );
 		}else{
 			ESP.restart();
