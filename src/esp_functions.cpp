@@ -10,6 +10,7 @@
 	#include <SPIFFS.h>
 	#include <HTTPClient.h>
 	#include <Update.h>
+	#include <esp_wifi.h>
 #endif
 
 //-------------------------------------------------------------------------------
@@ -654,7 +655,11 @@ namespace esp {
 	void changeMAC(const uint8_t *mac)
 	{
 		ESP_DEBUG( "OLD ESP MAC: %s\n", WiFi.macAddress().c_str() );
+#if defined(ARDUINO_ARCH_ESP8266)
 		wifi_set_macaddr( 0, const_cast<uint8*>(mac) );
+#elif defined(ARDUINO_ARCH_ESP32)
+		esp_wifi_set_mac( WIFI_IF_STA, mac );
+#endif
 		ESP_DEBUG( "NEW ESP MAC: %s\n", WiFi.macAddress().c_str() );
 	}
 
