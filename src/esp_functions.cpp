@@ -633,7 +633,7 @@ namespace esp {
 		LittleFS.begin();
 		delay( 700 );
 #elif defined(ARDUINO_ARCH_ESP32)
-		SPIFFS.begin();
+		SPIFFS.begin( true );
 		delay( 700 );
 #endif
 		esp::flags.ap_mode							= 0;
