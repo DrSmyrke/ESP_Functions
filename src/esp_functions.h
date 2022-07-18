@@ -46,6 +46,7 @@ namespace esp {
 	extern const char* pageEndTop;
 	extern const char* pageBottom;
 	extern char* pageBuff;
+	extern char tmpVal[ 11 ];
 	/**
 	 * read ssid and key for AP from spi fs
 	 * @param {char*} ssid

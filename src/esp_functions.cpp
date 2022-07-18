@@ -22,6 +22,7 @@ namespace esp {
 	const char* pageEndTop = nullptr;
 	const char* pageBottom = nullptr;
 	char* pageBuff = nullptr;
+	char tmpVal[ 11 ];
 
 	//-------------------------------------------------------------------------------
 	uint8_t readAPconfig(char *ssid, char *key)
@@ -305,6 +306,39 @@ namespace esp {
 				esp::handleWeb404Page( webServer );
 			} );
 		}
+
+		webServer->on( "/sysinfo", [ webServer ](void){
+			if( pageBuff == nullptr ){
+				webServer->send ( 200, "text/html", "pageBuff is nullptr" );
+				return;
+			}
+
+
+			strcpy( esp::pageBuff, "<table>" );
+
+			strcat( esp::pageBuff, "<tr><td>CPU Frequencyreq:</td><td>" );
+			utoa( ESP.getCpuFreqMHz(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
+			strcat( esp::pageBuff, "</td><tr>" );
+
+			strcat( esp::pageBuff, "<tr><td>FS Total bytes:</td><td>" );
+#if defined(ARDUINO_ARCH_ESP8266)
+			utoa( LittleFS.totalBytes(), esp::tmpVal ); strcat( esp::pageBuff, esp::tmpVal );
+#elif defined(ARDUINO_ARCH_ESP32)
+			utoa( SPIFFS.totalBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
+#endif
+			strcat( esp::pageBuff, "</td><tr>" );
+			strcat( esp::pageBuff, "<tr><td>FS Used bytes:</td><td>" );
+#if defined(ARDUINO_ARCH_ESP8266)
+			utoa( LittleFS.usedBytes(), esp::tmpVal ); strcat( esp::pageBuff, esp::tmpVal );
+#elif defined(ARDUINO_ARCH_ESP32)
+			utoa( SPIFFS.usedBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
+#endif
+			strcat( esp::pageBuff, "</td><tr>" );
+
+			strcat( esp::pageBuff, "</table>" );
+
+			webServer->send ( 200, "text/html", esp::pageBuff );
+		} );
 
 		webServer->on( "/favicon.ico", [ webServer, captivePortal, cp_handler ](void){
 			if( esp::flags.ap_mode && captivePortal ){
