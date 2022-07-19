@@ -322,14 +322,14 @@ namespace esp {
 
 			strcat( esp::pageBuff, "<tr><td>FS Total bytes:</td><td>" );
 #if defined(ARDUINO_ARCH_ESP8266)
-			utoa( LittleFS.totalBytes(), esp::tmpVal ); strcat( esp::pageBuff, esp::tmpVal );
+			itoa( -1, esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 #elif defined(ARDUINO_ARCH_ESP32)
 			utoa( SPIFFS.totalBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 #endif
 			strcat( esp::pageBuff, "</td><tr>" );
 			strcat( esp::pageBuff, "<tr><td>FS Used bytes:</td><td>" );
 #if defined(ARDUINO_ARCH_ESP8266)
-			utoa( LittleFS.usedBytes(), esp::tmpVal ); strcat( esp::pageBuff, esp::tmpVal );
+			itoa( -1, esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 #elif defined(ARDUINO_ARCH_ESP32)
 			utoa( SPIFFS.usedBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 #endif
