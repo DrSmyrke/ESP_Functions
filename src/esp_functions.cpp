@@ -1,4 +1,4 @@
-/* Includes ------------------------------------------------------------------*/
+//------------ Includes -----------------------------------------------------------------
 #include "esp_functions.h"
 
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -342,27 +342,7 @@ namespace esp {
 
 		webServer->on( "/favicon.ico", [ webServer, captivePortal, cp_handler ](void){
 			if( esp::flags.ap_mode && captivePortal ){
-				//------------------------------------------------------------------------
-				if( webServer->hasArg( "getAccess" ) ) esp::flags.captivePortalAccess = 1;
-				//------------------------------------------------------------------------
-				if( pageBuff == nullptr ){
-					webServer->send ( ( !esp::flags.captivePortalAccess ) ? 200 : 204, "text/html", "pageBuff is nullptr" );
-					return;
-				}
-
-				if( esp::pageTop != nullptr ) strcpy( esp::pageBuff, esp::pageTop );
-				strcat( esp::pageBuff, "<title>Captive portal</title>" );
-				if( esp::pageEndTop != nullptr ) strcat( esp::pageBuff, esp::pageEndTop );
-				strcat( esp::pageBuff, "<h1>ESP Captive portal</h1>" );
-				strcat( esp::pageBuff, "<br>" );
-				strcat( esp::pageBuff, webServer->header( "Location" ).c_str() );
-				strcat( esp::pageBuff, "<br>" );
-				strcat( esp::pageBuff, webServer->uri().c_str() );
-				strcat( esp::pageBuff, "<br>" );
-				if( cp_handler != nullptr ) cp_handler();
-				if( esp::pageBottom != nullptr ) strcat( esp::pageBuff, esp::pageBottom );
-
-				webServer->send ( ( !esp::flags.captivePortalAccess ) ? 200 : 204, "text/html", esp::pageBuff );
+				captivePortalPage( webServer, cp_handler );
 			}else{
 				esp::webSendFile( webServer, "/favicon.ico", "image/x-icon" );
 			}
@@ -375,10 +355,13 @@ namespace esp {
 			esp::webSendFile( webServer, "/index.js", "text/javascript" );
 		} );
 
-		if( cp_handler != nullptr ){
-			webServer->on( "/fwlink", cp_handler );
-			webServer->on( "/generate_204", cp_handler );
-			webServer->on( "/favicon.ico", cp_handler );
+		if( captivePortal ){
+			webServer->on( "/fwlink", [ webServer, cp_handler ](void){
+				captivePortalPage( webServer, cp_handler );
+			} );
+			webServer->on( "/generate_204", [ webServer, cp_handler ](void){
+				captivePortalPage( webServer, cp_handler );
+			} );
 		}
 	}
 
@@ -694,6 +677,35 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
+#if defined(ARDUINO_ARCH_ESP8266)
+	void captivePortalPage(ESP8266WebServer *webServer, ESP8266WebServer::THandlerFunction cp_handler)
+#elif defined(ARDUINO_ARCH_ESP32)
+	void captivePortalPage(WebServer *webServer, WebServer::THandlerFunction cp_handler)
+#endif
+	{
+		//------------------------------------------------------------------------
+		if( webServer->hasArg( "getAccess" ) ) esp::flags.captivePortalAccess = 1;
+		//------------------------------------------------------------------------
+		if( pageBuff == nullptr ){
+			webServer->send ( ( !esp::flags.captivePortalAccess ) ? 200 : 204, "text/html", "pageBuff is nullptr" );
+			return;
+		}
+
+		if( esp::pageTop != nullptr ) strcpy( esp::pageBuff, esp::pageTop );
+		strcat( esp::pageBuff, "<title>Captive portal</title>" );
+		if( esp::pageEndTop != nullptr ) strcat( esp::pageBuff, esp::pageEndTop );
+		strcat( esp::pageBuff, "<h1>ESP Captive portal</h1>" );
+		strcat( esp::pageBuff, "<br>" );
+		strcat( esp::pageBuff, webServer->header( "Location" ).c_str() );
+		strcat( esp::pageBuff, "<br>" );
+		strcat( esp::pageBuff, webServer->uri().c_str() );
+		strcat( esp::pageBuff, "<br>" );
+		if( cp_handler != nullptr ) cp_handler();
+		if( esp::pageBottom != nullptr ) strcat( esp::pageBuff, esp::pageBottom );
+
+		webServer->send ( ( !esp::flags.captivePortalAccess ) ? 200 : 204, "text/html", esp::pageBuff );
+	}
+
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------

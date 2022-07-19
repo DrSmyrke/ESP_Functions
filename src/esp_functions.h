@@ -228,6 +228,15 @@ namespace esp {
 	 * @return {none}
 	 */
 	void changeMAC(const uint8_t *mac);
+	/**
+	 * Captive portal page
+	 * @return {none}
+	 */
+#if defined(ARDUINO_ARCH_ESP8266)
+	void captivePortalPage(ESP8266WebServer *webServer, ESP8266WebServer::THandlerFunction cp_handler = nullptr);
+#elif defined(ARDUINO_ARCH_ESP32)
+	void captivePortalPage(WebServer *webServer, WebServer::THandlerFunction cp_handler = nullptr);
+#endif
 }
 
 //-------------------------------------------------------------------------------
