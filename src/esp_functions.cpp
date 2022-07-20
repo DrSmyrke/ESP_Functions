@@ -164,13 +164,18 @@ namespace esp {
 
 	//-------------------------------------------------------------------------------
 #if defined(ARDUINO_ARCH_ESP8266)
-	void setWebRedirect(ESP8266WebServer *webServer)
+	void setWebRedirect(ESP8266WebServer *webServer, const String &target)
 #elif defined(ARDUINO_ARCH_ESP32)
-	void setWebRedirect(WebServer *webServer)
+	void setWebRedirect(WebServer *webServer, const String &target)
 #endif
-	{	String location = "http://" + String( WiFi.getHostname() ) + ".lan/";
+	{
+		String location = "http://" + target;
+		ESP_DEBUG( "WEB Redirect to [%s]\n", location.c_str() );
+
+		if( target == "" ) return;
+
 		// String location = "http://" + webServer->client().localIP().toString();
-		webServer->sendHeader( "Location", location, true);
+		webServer->sendHeader( "Location", location, true );
 		webServer->send ( 302, "text/plain", "" );
 		webServer->client().stop();
 	}
@@ -235,6 +240,8 @@ namespace esp {
 
 		esp::flags.ap_mode = 1;
 
+		ESP_DEBUG( "wifi_AP_init IP: %s\n", WiFi.softAPIP().toString().c_str() );
+
 		return res;
 	}
 
@@ -291,18 +298,28 @@ namespace esp {
 
 	//-------------------------------------------------------------------------------
 #if defined(ARDUINO_ARCH_ESP8266)
-	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig, bool notFound, bool captivePortal, ESP8266WebServer::THandlerFunction cp_handler)
+	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig, bool notFound, bool captivePortal, ESP8266WebServer::THandlerFunction cp_handler, const String &captiveRedirectTarget)
 #elif defined(ARDUINO_ARCH_ESP32)
-	void addWebServerPages(WebServer *webServer, bool wifiConfig, bool notFound, bool captivePortal, WebServer::THandlerFunction cp_handler)
+	void addWebServerPages(WebServer *webServer, bool wifiConfig, bool notFound, bool captivePortal, WebServer::THandlerFunction cp_handler, const String &captiveRedirectTarget)
 #endif
 	{
 		if( wifiConfig ){
 			webServer->on( "/wifi", [ webServer ](void){
+				ESP_DEBUG( "WEB GET /wifi\n" );
 				esp::handleWebConfigPage( webServer );
 			} );
 		}
 		if( notFound ){
-			webServer->onNotFound( [ webServer ](void){
+			webServer->onNotFound( [ webServer, captiveRedirectTarget ](void){
+				String uri = webServer->uri();
+				ESP_DEBUG( "WEB 404 [%s]\n", uri.c_str() );
+
+				if( esp::flags.captivePortal && !esp::flags.captivePortalAccess ){
+					String target = ( captiveRedirectTarget.charAt( 0 ) == '/' ) ? WiFi.softAPSSID() + ".lan" + captiveRedirectTarget : captiveRedirectTarget;
+					target.toLowerCase();
+					esp::setWebRedirect( webServer, target );
+					return;
+				}
 				esp::handleWeb404Page( webServer );
 			} );
 		}
@@ -360,8 +377,11 @@ namespace esp {
 				captivePortalPage( webServer, cp_handler );
 			} );
 			webServer->on( "/generate_204", [ webServer, cp_handler ](void){
+				ESP_DEBUG( "WEB GET [404]: %s\n", webServer->header( "Location" ).c_str() );
 				captivePortalPage( webServer, cp_handler );
 			} );
+
+			esp::flags.captivePortal = 1;
 		}
 	}
 
@@ -444,19 +464,16 @@ namespace esp {
 	void handleWeb404Page(WebServer *webServer)
 #endif
 	{
-		if( esp::flags.captivePortalAccess ){
-			esp::setWebRedirect( webServer );
-			return;
-		}
-
-		if( !webSendFile( webServer, "/index.html", "text/html" ) ){
+		if( !esp::webSendFile( webServer, "/404.html", "text/html", 0 ) && !esp::webSendFile( webServer, "/index.html", "text/html", 0 ) ){
+			if( pageBuff == nullptr ){
+				webServer->send ( 200, "text/html", "pageBuff is nullptr" );
+				return;
+			}
 			esp::pageBuff[ 0 ] = '\0';
 			if( esp::pageTop != nullptr ) strcpy( esp::pageBuff, esp::pageTop );
 			strcat( esp::pageBuff, "<title>Not found</title>" );
 			if( esp::pageEndTop != nullptr ) strcat( esp::pageBuff, esp::pageEndTop );
 			strcat( esp::pageBuff, "<h1>404 Not found</h1>" );
-			strcat( esp::pageBuff, webServer->header( "Location" ).c_str() );
-			strcat( esp::pageBuff, "<br>" );
 			strcat( esp::pageBuff, webServer->uri().c_str() );
 			if( esp::pageBottom != nullptr ) strcat( esp::pageBuff, esp::pageBottom );
 			webServer->send ( 200, "text/html", esp::pageBuff );
@@ -465,9 +482,9 @@ namespace esp {
 
 	//-------------------------------------------------------------------------------
 	#if defined(ARDUINO_ARCH_ESP8266)
-	uint8_t webSendFile(ESP8266WebServer *webServer, char* fileName, char* mimeType, const uint16_t code)
+	uint8_t webSendFile(ESP8266WebServer *webServer, const char* fileName, const char* mimeType, const uint16_t code)
 #elif defined(ARDUINO_ARCH_ESP32)
-	uint8_t webSendFile(WebServer *webServer, char* fileName, char* mimeType, const uint16_t code)
+	uint8_t webSendFile(WebServer *webServer, const char* fileName, const char* mimeType, const uint16_t code)
 #endif
 	{
 		if( esp::isFileExists( fileName ) ){
@@ -482,7 +499,7 @@ namespace esp {
 			f.close();
 			webServer->client().stop();
 		}else{
-			webServer->send( ( code == 200 ) ? 404 : code, "text/html", "File not found :(");
+			if( code ) webServer->send( ( code == 200 ) ? 404 : code, "text/html", "File not found :(");
 			return 0;
 		}
 
@@ -654,6 +671,7 @@ namespace esp {
 		delay( 700 );
 #endif
 		esp::flags.ap_mode							= 0;
+		esp::flags.captivePortal					= 0;
 		esp::flags.captivePortalAccess				= 0;
 		esp::flags.autoUpdate						= 0;
 

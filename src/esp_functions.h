@@ -37,6 +37,7 @@ namespace esp {
 	};
 	typedef struct {
 		unsigned char ap_mode: 1;
+		unsigned char captivePortal: 1;
 		unsigned char captivePortalAccess: 1;
 		unsigned char autoUpdate: 1;
 	} Flags;
@@ -93,9 +94,9 @@ namespace esp {
 	 * @return none
 	 */
 #if defined(ARDUINO_ARCH_ESP8266)
-	void setWebRedirect(ESP8266WebServer *webServer);
+	void setWebRedirect(ESP8266WebServer *webServer, const String &target = "");
 #elif defined(ARDUINO_ARCH_ESP32)
-	void setWebRedirect(WebServer *webServer);
+	void setWebRedirect(WebServer *webServer, const String &target = "");
 #endif
 	/**
 	 * checking Connections for AP from STA mode
@@ -151,9 +152,9 @@ namespace esp {
 	 * @return none
 	 */
 #if defined(ARDUINO_ARCH_ESP8266)
-	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, ESP8266WebServer::THandlerFunction cp_handler = nullptr);
+	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, ESP8266WebServer::THandlerFunction cp_handler = nullptr, const String &captiveRedirectTarget = "/wifi");
 #elif defined(ARDUINO_ARCH_ESP32)
-	void addWebServerPages(WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, WebServer::THandlerFunction cp_handler = nullptr);
+	void addWebServerPages(WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, WebServer::THandlerFunction cp_handler = nullptr, const String &captiveRedirectTarget = "/wifi");
 #endif
 	/**
 	 * web config page
@@ -183,9 +184,9 @@ namespace esp {
 	 * @return none
 	 */
 #if defined(ARDUINO_ARCH_ESP8266)
-	uint8_t webSendFile(ESP8266WebServer *webServer, char* fileName, char* mimeType, const uint16_t code = 200);
+	uint8_t webSendFile(ESP8266WebServer *webServer, const char* fileName, const char* mimeType, const uint16_t code = 200);
 #elif defined(ARDUINO_ARCH_ESP32)
-	uint8_t webSendFile(WebServer *webServer, char* fileName, char* mimeType, const uint16_t code = 200);
+	uint8_t webSendFile(WebServer *webServer, const char* fileName, const char* mimeType, const uint16_t code = 200);
 #endif
 	/**
 	 * Checking for updates 
