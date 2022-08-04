@@ -238,6 +238,14 @@ namespace esp {
 #elif defined(ARDUINO_ARCH_ESP32)
 	void captivePortalPage(WebServer *webServer, WebServer::THandlerFunction cp_handler = nullptr);
 #endif
+	/**
+	 * HTTP Put request
+	 * @param {String &} URL
+	 * @param {String &} playload
+	 * @param {String &} response
+	 * @return {int} http response code
+	 */
+	int http_put(const String &url, const String &playload, String &response);
 }
 
 //-------------------------------------------------------------------------------

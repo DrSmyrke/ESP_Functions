@@ -725,6 +725,27 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
+	int http_put(const String &url, const String &playload, String &response)
+	{
+		HTTPClient http;
+#if defined(ARDUINO_ARCH_ESP8266)
+		WiFiClient client;
+		http.begin( client, url );
+#elif defined(ARDUINO_ARCH_ESP32)
+		http.begin( url );
+#endif
+		String request = "{ \"user\": \"DrSmyrke\", \"message\": \"IR Reciever starting...\", \"key\": \"0f7d848c56094bf722ca34701d38938e\" }";
+		int httpCode = http.PUT( playload );
+		
+		// if( httpCode == HTTP_CODE_OK ){
+			response = http.getString();
+		// }
+
+		http.end();
+
+		return httpCode;
+	}
+
 	//-------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------
 }
