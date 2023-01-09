@@ -255,6 +255,8 @@ namespace esp {
 
 		WiFi.softAPdisconnect( true );
 		WiFi.mode( WiFiMode_t::WIFI_STA );
+		WiFi.setAutoReconnect( true );
+		WiFi.persistent( true );
 
 		if( esp::readSTAconfig( ssid, skey ) ){
 			ESP_DEBUG( "Connect to %s\n", ssid );
