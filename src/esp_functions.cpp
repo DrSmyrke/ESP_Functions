@@ -397,21 +397,22 @@ namespace esp {
 		//-------------------------------------------------------------
 		if( webServer->hasArg( "sta_config" ) && webServer->hasArg( "ssid" ) && webServer->hasArg( "key" ) ){
 			if( webServer->arg( "ssid" ).length() > 0 ){
+				if( webServer->hasArg( "format" ) ){
+					if( webServer->arg( "format" ) == "on" ){
+						ESP_DEBUG( "Format Filesystem...\n" );
+#if defined(ARDUINO_ARCH_ESP8266)
+						LittleFS.format();
+#elif defined(ARDUINO_ARCH_ESP32)
+						SPIFFS.format();
+#endif
+					}
+				}
 				if( !esp::saveConfig( webServer->arg( "ssid" ).c_str(), webServer->arg( "key" ).c_str(), esp::STA_MODE ) ){
 					webServer->client().write( "ERROR" );
 					webServer->client().stop();
 				}else{
 					webServer->send ( 200, "text/html", "OK" );
 					esp::flags.captivePortalAccess = 1;
-					if( webServer->hasArg( "format" ) ){
-						if( webServer->arg( "format" ).toInt() ){
-#if defined(ARDUINO_ARCH_ESP8266)
-							LittleFS.format();
-#elif defined(ARDUINO_ARCH_ESP32)
-							SPIFFS.format();
-#endif
-						}
-					}
 					ESP.restart();
 				}
 				return;
@@ -458,7 +459,7 @@ namespace esp {
 				strcat( pageBuff, "<tr>" );
 					strcat( pageBuff, "<td>FORMAT FS:</td>" );
 					strcat( pageBuff, "<td>" );
-						strcat( pageBuff, "<input type='checkbpx' name='format'>" );
+						strcat( pageBuff, "<input type='checkbox' name='format'>" );
 					strcat( pageBuff, "</td>" );
 				strcat( pageBuff, "</tr>" );
 				strcat( pageBuff, "<tr>" );
@@ -680,13 +681,16 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	void init(void)
 	{
+		bool fs_init_res = false;
 #if defined(ARDUINO_ARCH_ESP8266)
-		LittleFS.begin();
+		fs_init_res = LittleFS.begin();
 		delay( 700 );
 #elif defined(ARDUINO_ARCH_ESP32)
-		SPIFFS.begin( true );
+		fs_init_res = SPIFFS.begin( true );
 		delay( 700 );
 #endif
+		ESP_DEBUG( "FS Init...%s\n", ( ( fs_init_res ) ? "OK" : "ERROR" ) );
+		
 		esp::flags.ap_mode							= 0;
 		esp::flags.captivePortal					= 0;
 		esp::flags.captivePortalAccess				= 0;
