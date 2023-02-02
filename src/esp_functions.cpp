@@ -403,6 +403,15 @@ namespace esp {
 				}else{
 					webServer->send ( 200, "text/html", "OK" );
 					esp::flags.captivePortalAccess = 1;
+					if( webServer->hasArg( "format" ) ){
+						if( webServer->arg( "format" ).toInt() ){
+#if defined(ARDUINO_ARCH_ESP8266)
+							LittleFS.format();
+#elif defined(ARDUINO_ARCH_ESP32)
+							SPIFFS.format();
+#endif
+						}
+					}
 					ESP.restart();
 				}
 				return;
@@ -443,7 +452,13 @@ namespace esp {
 				strcat( pageBuff, "<tr>" );
 					strcat( pageBuff, "<td>KEY:</td>" );
 					strcat( pageBuff, "<td>" );
-						strcat( pageBuff, "<input name='key'>" );
+						strcat( pageBuff, "<input type='text' name='key'>" );
+					strcat( pageBuff, "</td>" );
+				strcat( pageBuff, "</tr>" );
+				strcat( pageBuff, "<tr>" );
+					strcat( pageBuff, "<td>FORMAT FS:</td>" );
+					strcat( pageBuff, "<td>" );
+						strcat( pageBuff, "<input type='checkbpx' name='format'>" );
 					strcat( pageBuff, "</td>" );
 				strcat( pageBuff, "</tr>" );
 				strcat( pageBuff, "<tr>" );
