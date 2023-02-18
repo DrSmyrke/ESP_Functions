@@ -23,6 +23,8 @@ namespace esp {
 	const char* pageBottom = nullptr;
 	char* pageBuff = nullptr;
 	char tmpVal[ 11 ];
+	char systemLogin[ 16 ];
+	char systemPassword[ 16 ];
 
 	//-------------------------------------------------------------------------------
 	uint8_t readAPconfig(char *ssid, char *key)
@@ -72,6 +74,7 @@ namespace esp {
 	uint8_t saveConfig(const char *ssid, const char *key, uint8_t mode)
 	{
 		uint8_t result = 0;
+		if( !esp::flags.useFS ) return result;
 #if defined(ARDUINO_ARCH_ESP8266)
 		File f = LittleFS.open( ( mode == esp::AP_MODE ) ? ESP_AP_CONFIG_FILE : ESP_STA_CONFIG_FILE, "w");
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -160,6 +163,19 @@ namespace esp {
 		if( ssidLen > 2 && keyLen >= 8 ) result = 1;
 
 		return result;
+	}
+
+	//-------------------------------------------------------------------------------
+	void removeFile(const char* file)
+	{
+		if( !esp::flags.useFS ) return;
+		if( esp::isFileExists( file ) ){
+#if defined(ARDUINO_ARCH_ESP8266)
+			LittleFS.remove( file );
+#elif defined(ARDUINO_ARCH_ESP32)
+			SPIFFS.remove( file );
+#endif
+		}
 	}
 
 	//-------------------------------------------------------------------------------
@@ -262,6 +278,7 @@ namespace esp {
 			ESP_DEBUG( "Connect to %s\n", ssid );
 			WiFi.begin( ssid, skey );
 		}else{
+			esp::removeFile( ESP_STA_CONFIG_FILE );
 			ESP.restart();
 			return false;
 		}
@@ -274,14 +291,16 @@ namespace esp {
 			delay( 100 );
 			ESP_DEBUG( "." );
 		}
-		ESP_DEBUG( "\n" );
-		
-		if( !esp::isWiFiConnection() ){
-			ESP.restart();
-			return false;
-		}
 
 		esp::flags.ap_mode = 0;
+		
+		if( !esp::isWiFiConnection() ){
+			// ESP.restart();
+			ESP_DEBUG( "ERROR\n" );
+			return false;
+		}
+		
+		ESP_DEBUG( "\n" );
 
 		return true;
 	}
@@ -335,24 +354,38 @@ namespace esp {
 
 			strcpy( esp::pageBuff, "<table>" );
 
-			strcat( esp::pageBuff, "<tr><td>CPU Frequencyreq:</td><td>" );
+			strcat( esp::pageBuff, "<tr><td>CPU Frequency:</td><td>" );
 			utoa( ESP.getCpuFreqMHz(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 			strcat( esp::pageBuff, "</td><tr>" );
 
-			strcat( esp::pageBuff, "<tr><td>FS Total bytes:</td><td>" );
+			if( esp::flags.useFS ){
+				strcat( esp::pageBuff, "<tr><td>FS Total bytes:</td><td>" );
 #if defined(ARDUINO_ARCH_ESP8266)
-			itoa( -1, esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
+				FSInfo64 info;
+				bool resInfo = LittleFS.info64( info );
+				if( resInfo ){
+					itoa( info.totalBytes, esp::tmpVal, 10 );
+				}else{
+					itoa( -1, esp::tmpVal, 10 );
+				}
+				strcat( esp::pageBuff, esp::tmpVal );
 #elif defined(ARDUINO_ARCH_ESP32)
-			utoa( SPIFFS.totalBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
+				utoa( SPIFFS.totalBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 #endif
-			strcat( esp::pageBuff, "</td><tr>" );
-			strcat( esp::pageBuff, "<tr><td>FS Used bytes:</td><td>" );
+				strcat( esp::pageBuff, "</td><tr>" );
+				strcat( esp::pageBuff, "<tr><td>FS Used bytes:</td><td>" );
 #if defined(ARDUINO_ARCH_ESP8266)
-			itoa( -1, esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
+				if( resInfo ){
+					itoa( info.usedBytes, esp::tmpVal, 10 );
+				}else{
+					itoa( -1, esp::tmpVal, 10 );
+				}
+				strcat( esp::pageBuff, esp::tmpVal );
 #elif defined(ARDUINO_ARCH_ESP32)
-			utoa( SPIFFS.usedBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
+				utoa( SPIFFS.usedBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 #endif
-			strcat( esp::pageBuff, "</td><tr>" );
+				strcat( esp::pageBuff, "</td><tr>" );
+			}
 
 			strcat( esp::pageBuff, "</table>" );
 
@@ -372,6 +405,23 @@ namespace esp {
 		} );
 		webServer->on( "/index.js", [ webServer ](void){
 			esp::webSendFile( webServer, "/index.js", "text/javascript" );
+		} );
+
+		webServer->on( "/format", [ webServer ](void){
+			if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
+#if defined(ARDUINO_ARCH_ESP8266)
+				bool res = LittleFS.format();
+#elif defined(ARDUINO_ARCH_ESP32)
+				bool res = SPIFFS.format();
+#endif
+				if( res ){
+					webServer->send ( 200, "application/json", "{ \"result\": \"OK\" }" );
+				}else{
+					webServer->send ( 500, "application/json", "{ \"result\": \"ERROR\" }" );
+				}
+			}else{
+				webServer->send ( 403, "application/json", "{ \"result\": \"access denied\" }" );
+			}
 		} );
 
 		if( captivePortal ){
@@ -528,6 +578,7 @@ namespace esp {
 	uint32_t checkingUpdate(const char *repoURL, const uint16_t version)
 	{
 		uint32_t res = 0;
+		if( !esp::flags.useFS ) return res;
 		HTTPClient http;
 #if defined(ARDUINO_ARCH_ESP8266)
 		WiFiClient client;
@@ -550,6 +601,7 @@ namespace esp {
 	uint8_t downloadUpdate(const char *repoURL, const char *file)
 	{
 		uint8_t res = 0;
+		if( !esp::flags.useFS ) return res;
 		HTTPClient http;
 #if defined(ARDUINO_ARCH_ESP8266)
 		WiFiClient client;
@@ -596,6 +648,7 @@ namespace esp {
 	uint8_t updateFromFS(void)
 	{
 		uint8_t res = 0;
+		if( !esp::flags.useFS ) return res;
 
 		if( esp::isFileExists( ESP_FIRMWARE_FILENAME ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -649,6 +702,7 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	bool isFileExists(const char *filepath)
 	{
+		if( !esp::flags.useFS ) return false;
 #if defined(ARDUINO_ARCH_ESP8266)
 		return LittleFS.exists( filepath );
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -659,6 +713,7 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	void printAllFiles(HardwareSerial &SerialPort)
 	{
+		if( !esp::flags.useFS ) return;
 #if defined(ARDUINO_ARCH_ESP8266)
 		Dir root = LittleFS.openDir( "/" );
 		while( root.next() ){
@@ -679,17 +734,21 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	void init(void)
+	void init(bool useFS)
 	{
-		bool fs_init_res = false;
+		esp::flags.useFS							= 0;
+
+		if( useFS ){
+			bool fs_init_res = false;
 #if defined(ARDUINO_ARCH_ESP8266)
-		fs_init_res = LittleFS.begin();
-		delay( 700 );
+			fs_init_res = LittleFS.begin();
 #elif defined(ARDUINO_ARCH_ESP32)
-		fs_init_res = SPIFFS.begin( true );
-		delay( 700 );
+			fs_init_res = SPIFFS.begin( true );
 #endif
-		ESP_DEBUG( "FS Init...%s\n", ( ( fs_init_res ) ? "OK" : "ERROR" ) );
+			delay( 500 );
+			ESP_DEBUG( "FS Init...%s\n", ( ( fs_init_res ) ? "OK" : "ERROR" ) );
+			esp::flags.useFS						= ( fs_init_res ) ? 1 : 0;
+		}
 		
 		esp::flags.ap_mode							= 0;
 		esp::flags.captivePortal					= 0;
@@ -701,6 +760,9 @@ namespace esp {
 		pageTop = "<!DOCTYPE HTML><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta charset=\"utf-8\"/><script type=\"text/javascript\" src=\"/index.js\"></script><link rel=\"stylesheet\" type=\"text/css\" href=\"/index.css\"/>";
 		pageEndTop = "</head><body><hr size=\"1\">";
 		pageBottom = "<hr size=\"1\" class=\"red\"></body></html>";
+
+		strcpy( esp::systemLogin, SYSTEM_LOGIN );
+		strcpy( esp::systemPassword, SYSTEM_PASSWORD );
 	}
 
 	//-------------------------------------------------------------------------------
@@ -768,5 +830,49 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
+	void saveSettings(const uint8_t* data, uint8_t length, const char* settingsFile)
+	{
+		if( length <= 0 || data == nullptr || settingsFile == nullptr || !esp::flags.useFS ) return;
+#if defined(ARDUINO_ARCH_ESP8266)
+		File f = LittleFS.open( settingsFile, "w");
+#elif defined(ARDUINO_ARCH_ESP32)
+		File f = SPIFFS.open( settingsFile, "w");
+#endif
+		if( f ){
+			f.write( data, length );
+			f.close();
+		}
+	}
+
+	//-------------------------------------------------------------------------------
+	uint8_t loadSettings(uint8_t* data, size_t size, const char* settingsFile)
+	{
+		uint8_t res = 0;
+		if( size <= 0 || data == nullptr || settingsFile == nullptr || !esp::flags.useFS ) return res;
+
+		if( esp::isFileExists( settingsFile ) ){
+#if defined(ARDUINO_ARCH_ESP8266)
+			File f = LittleFS.open( settingsFile, "r");
+#elif defined(ARDUINO_ARCH_ESP32)
+			File f = SPIFFS.open( settingsFile, "r");
+#endif
+			if( f ){
+				res = f.read( data, size );
+				f.close();
+			}
+		}
+		return res;
+	}
+	//-------------------------------------------------------------------------------
+	void changeSystemUserPassword(const char* login, const char* password)
+	{
+		if( login == nullptr || password == nullptr ) return;
+		if( strlen( login ) > sizeof( esp::systemLogin ) ) return;
+		if( strlen( password ) > sizeof( esp::systemPassword ) ) return;
+
+		strcpy( esp::systemLogin, login );
+		strcpy( esp::systemPassword, password );
+	}
+
 	//-------------------------------------------------------------------------------
 }

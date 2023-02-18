@@ -10,6 +10,10 @@
 #define ESP_FIRMWARE_FILENAME					"/firmware.bin"
 #define ESP_AUTOUPDATE_FILENAME					"/autoupdate"
 #define ESP_FIRMWARE_VERSION_FILENAME			"/version"
+#define USER_SETTINGS_FILE						"/settings.dat"
+#define SYSTEM_LOGIN							"admin"
+#define SYSTEM_PASSWORD							"admin"
+#define ESP_AUTH_REALM							"Dr.Smyrke TECH"
 
 //-------------------------------------------------------------------------------
 #include <stdint.h>
@@ -40,6 +44,7 @@ namespace esp {
 		unsigned char captivePortal: 1;
 		unsigned char captivePortalAccess: 1;
 		unsigned char autoUpdate: 1;
+		unsigned char useFS: 1;
 	} Flags;
 	extern Flags flags;
 	extern int8_t countNetworks;
@@ -89,6 +94,12 @@ namespace esp {
 	 * @return {uint8_t} result ( 1 - success, 0 - error )
 	 */
 	uint8_t readSTAconfig(char *ssid, char *key);
+	/**
+	 * remove from spi fs
+	 * @param {char*} filepath
+	 * @return none
+	 */
+	void removeFile(const char* file);
 	/**
 	 * set redirect to / from web
 	 * @return none
@@ -221,9 +232,10 @@ namespace esp {
 	void printAllFiles(HardwareSerial &SerialPort);
 	/**
 	 * Initialize for library methods
+	 * @param {boolean} useFS (default: true)
 	 * @return {none}
 	 */
-	void init(void);
+	void init(bool useFS = true);
 	/**
 	 * Change MAC (!!! use after Connection initialize)
 	 * @return {none}
@@ -246,6 +258,29 @@ namespace esp {
 	 * @return {int} http response code
 	 */
 	int http_put(const String &url, const String &playload, String &response);
+	/**
+	 * Save settings at file from SPI FS
+	 * @param {const uint8_t*} data buffer (default: nullptr)
+	 * @param {uint8_t} length data (default: 0)
+	 * @param {const char*} settingsFile - filepath (default: USER_SETTINGS_FILE)
+	 * @return {none}
+	 */
+	void saveSettings(const uint8_t* data = nullptr, uint8_t length = 0, const char* settingsFile = USER_SETTINGS_FILE);
+	/**
+	 * Read settings at file from SPI FS
+	 * @param {uint8_t*} data buffer (default: nullptr)
+	 * @param {size_t} length data (default: 0)
+	 * @param {const char*} settingsFile - filepath (default: USER_SETTINGS_FILE)
+	 * @return {uint8_t} reading length
+	 */
+	uint8_t loadSettings(uint8_t* data = nullptr, size_t size = 0, const char* settingsFile = USER_SETTINGS_FILE);
+	/**
+	 * Set system user and password
+	 * @param {const char*} login (default: nullptr)
+	 * @param {const char*} password (default: nullptr)
+	 * @return {none}
+	 */
+	void changeSystemUserPassword(const char* login = nullptr, const char* password = nullptr);
 }
 
 //-------------------------------------------------------------------------------
