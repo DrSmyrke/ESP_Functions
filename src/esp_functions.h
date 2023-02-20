@@ -7,7 +7,8 @@
 #define ESP_AP_CONFIG_FILE						"/apConfig"
 #define ESP_CONFIG_SSID_MAX_LEN					32
 #define ESP_CONFIG_KEY_MAX_LEN					32
-#define ESP_FIRMWARE_FILENAME					"/firmware.bin"
+#define ESP_FIRMWARE_FILENAME					"firmware.bin"
+#define ESP_FIRMWARE_FILEPATH					"/firmware.bin"
 #define ESP_AUTOUPDATE_FILENAME					"/autoupdate"
 #define ESP_FIRMWARE_VERSION_FILENAME			"/version"
 #define USER_SETTINGS_FILE						"/settings.dat"
@@ -45,6 +46,7 @@ namespace esp {
 		unsigned char captivePortalAccess: 1;
 		unsigned char autoUpdate: 1;
 		unsigned char useFS: 1;
+		unsigned char updateError: 1;
 	} Flags;
 	extern Flags flags;
 	extern int8_t countNetworks;
@@ -281,6 +283,15 @@ namespace esp {
 	 * @return {none}
 	 */
 	void changeSystemUserPassword(const char* login = nullptr, const char* password = nullptr);
+	/**
+	 * Update process function
+	 * @return {none}
+	 */
+#if defined(ARDUINO_ARCH_ESP8266)
+	void updateProcess(ESP8266WebServer *webServer);
+#elif defined(ARDUINO_ARCH_ESP32)
+	void updateProcess(WebServer *webServer);
+#endif
 }
 
 //-------------------------------------------------------------------------------

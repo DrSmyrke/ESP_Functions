@@ -406,6 +406,11 @@ namespace esp {
 		webServer->on( "/index.js", [ webServer ](void){
 			esp::webSendFile( webServer, "/index.js", "text/javascript" );
 		} );
+		webServer->on( "/update", HTTPMethod::HTTP_POST, [ webServer ](void){
+			if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
+				esp::updateProcess( webServer );
+			}
+		} );
 
 		webServer->on( "/format", [ webServer ](void){
 			if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
@@ -650,15 +655,15 @@ namespace esp {
 		uint8_t res = 0;
 		if( !esp::flags.useFS ) return res;
 
-		if( esp::isFileExists( ESP_FIRMWARE_FILENAME ) ){
+		if( esp::isFileExists( ESP_FIRMWARE_FILEPATH ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
-			File f = LittleFS.open( ESP_FIRMWARE_FILENAME, "r");
+			File f = LittleFS.open( ESP_FIRMWARE_FILEPATH, "r");
 #elif defined(ARDUINO_ARCH_ESP32)
-			File f = SPIFFS.open( ESP_FIRMWARE_FILENAME, "r");
+			File f = SPIFFS.open( ESP_FIRMWARE_FILEPATH, "r");
 #endif
 			if( f ){
 				if( f.isDirectory() ){
-					ESP_DEBUG( "%s:%d Error, %s is not a file\n", __FILE__, __LINE__, ESP_FIRMWARE_FILENAME );
+					ESP_DEBUG( "%s:%d Error, %s is not a file\n", __FILE__, __LINE__, ESP_FIRMWARE_FILEPATH );
 					f.close();
 					return res;
 				}
@@ -693,7 +698,7 @@ namespace esp {
 				f.close();
 			}
 		}else{
-			ESP_DEBUG( "%s:%d Could not load %s from spiffs root\n", __FILE__, __LINE__, ESP_FIRMWARE_FILENAME );
+			ESP_DEBUG( "%s:%d Could not load %s from spiffs root\n", __FILE__, __LINE__, ESP_FIRMWARE_FILEPATH );
 		}
 
 		return res;
@@ -872,6 +877,61 @@ namespace esp {
 
 		strcpy( esp::systemLogin, login );
 		strcpy( esp::systemPassword, password );
+	}
+
+	//-------------------------------------------------------------------------------
+#if defined(ARDUINO_ARCH_ESP8266)
+	void updateProcess(ESP8266WebServer *webServer)
+#elif defined(ARDUINO_ARCH_ESP32)
+	void updateProcess(WebServer *webServer)
+#endif
+	{
+		HTTPUpload& upload = webServer->upload();
+
+		if( upload.status == UPLOAD_FILE_START ){
+			esp::flags.updateError = 0;
+			if( upload.name == "filesystem" ){
+#if defined(ARDUINO_ARCH_ESP8266)
+				FSInfo64 info;
+				bool resInfo = LittleFS.info64( info );
+				size_t fsSize = info.totalBytes - info.usedBytes;
+				LittleFS.end();
+				//start with max available size
+				if( !Update.begin( fsSize, U_FS ) ){
+#elif defined(ARDUINO_ARCH_ESP32)
+				size_t fsSize = SPIFFS.totalBytes() - SPIFFS.usedBytes();
+				SPIFFS.end();
+				//start with max available size
+				if( !Update.begin( fsSize, U_SPIFFS ) ){
+#endif
+					webServer->send ( 500, "text/html", "update begin fs error" );
+					esp::flags.updateError = 1;
+				}
+			}else if( upload.name == ESP_FIRMWARE_FILENAME ){
+				uint32_t maxSketchSpace = ( ESP.getFreeSketchSpace() - 0x1000 ) & 0xFFFFF000;
+				//start with max available size
+				if( !Update.begin( maxSketchSpace, U_FLASH ) ){
+					webServer->send ( 500, "text/html", "update begin firmware error" );
+					esp::flags.updateError = 1;
+				}
+			}
+		}else if( upload.status == UPLOAD_FILE_WRITE && !esp::flags.updateError ){
+			ESP_DEBUG( "." );
+			if( Update.write( upload.buf, upload.currentSize ) != upload.currentSize ){
+				webServer->send ( 500, "text/html", "update error" );
+			}
+		}else if( upload.status == UPLOAD_FILE_END && !esp::flags.updateError ){
+			//true to set the size to the current progress
+			if( Update.end( true ) ){
+				ESP_DEBUG( "Update Success: %zu\nRebooting...\n", upload.totalSize );
+			} else {
+				webServer->send ( 500, "text/html", "update error" );
+			}
+		}else if( upload.status == UPLOAD_FILE_ABORTED ){
+			Update.end();
+			ESP_DEBUG( "Update was aborted\n" );
+			webServer->send ( 500, "text/html", "update aborted" );
+		}
 	}
 
 	//-------------------------------------------------------------------------------
