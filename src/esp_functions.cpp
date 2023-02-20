@@ -256,7 +256,7 @@ namespace esp {
 
 		esp::flags.ap_mode = 1;
 
-		ESP_DEBUG( "wifi_AP_init IP: %s\n", WiFi.softAPIP().toString().c_str() );
+		ESP_DEBUG( "wifi_AP_init IP: %s SSID: %s\n", WiFi.softAPIP().toString().c_str(), WiFi.SSID().c_str() );
 
 		return res;
 	}
