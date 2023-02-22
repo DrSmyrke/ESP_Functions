@@ -244,7 +244,6 @@ namespace esp {
 		WiFi.hostname( hostname );
 		WiFi.mode( WiFiMode_t::WIFI_AP );
 		
-		
 		bool res = WiFi.softAP( hostname, "1234567890" );
 #if defined(ARDUINO_ARCH_ESP8266)
 	
@@ -256,7 +255,7 @@ namespace esp {
 
 		esp::flags.ap_mode = 1;
 
-		ESP_DEBUG( "wifi_AP_init IP: %s SSID: %s\n", WiFi.softAPIP().toString().c_str(), WiFi.SSID().c_str() );
+		ESP_DEBUG( "wifi_AP_init IP: %s SSID: %s HOSTNAME: %s\n", WiFi.softAPIP().toString().c_str(), WiFi.softAPSSID().c_str(), hostname );
 
 		return res;
 	}
@@ -271,8 +270,9 @@ namespace esp {
 
 		WiFi.softAPdisconnect( true );
 		WiFi.mode( WiFiMode_t::WIFI_STA );
-		WiFi.setAutoReconnect( true );
-		WiFi.persistent( true );
+		WiFi.setAutoReconnect( false );
+		WiFi.setAutoConnect( true );
+		// WiFi.persistent( true );
 
 		if( esp::readSTAconfig( ssid, skey ) ){
 			ESP_DEBUG( "Connect to %s\n", ssid );
@@ -560,17 +560,27 @@ namespace esp {
 	uint8_t webSendFile(WebServer *webServer, const char* fileName, const char* mimeType, const uint16_t code)
 #endif
 	{
+		ESP_DEBUG( "ESPF: Http send file [%s] %s\n", fileName, mimeType );
 		if( esp::isFileExists( fileName ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
 			File f = LittleFS.open( fileName, "r");
 #elif defined(ARDUINO_ARCH_ESP32)
 			File f = SPIFFS.open( fileName, "r");
 #endif
-			webServer->setContentLength(f.size());
-			webServer->send( code, mimeType, "" );
-			webServer->client().write(f);
-			f.close();
-			webServer->client().stop();
+			if( f ){
+				webServer->send( code, mimeType, f, f.size() );
+				f.close();
+			}else{
+				webServer->send( 500, "text/html", "File not open :(");
+			}
+			// webServer->setContentLength(f.size());
+			// webServer->send( code, mimeType, );
+			// while( f.available() ){
+				// int8_t len = f.read( (uint8_t*)esp::tmpVal, sizeof( esp::tmpVal ) );
+				// if( len ) webServer->client().write( esp::tmpVal, len );
+			// }
+			// f.close();
+			// webServer->client().stop();
 		}else{
 			if( code ) webServer->send( ( code == 200 ) ? 404 : code, "text/html", "File not found :(");
 			return 0;
