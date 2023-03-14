@@ -565,10 +565,14 @@ namespace esp {
 			File f = SPIFFS.open( fileName, "r");
 #endif
 			if( f ){
+#if defined(ARDUINO_ARCH_ESP8266)
 				webServer->send( code, mimeType, f, f.size() );
+#elif defined(ARDUINO_ARCH_ESP32)
+				webServer->streamFile( f, mimeType, code );
+#endif
 				f.close();
 			}else{
-				webServer->send( 500, "text/html", "File not open :(");
+				webServer->send( 500, "text/html", "File not open :(" );
 			}
 			// webServer->setContentLength(f.size());
 			// webServer->send( code, mimeType, );
