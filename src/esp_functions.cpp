@@ -25,6 +25,9 @@ namespace esp {
 	char tmpVal[ 11 ];
 	char systemLogin[ 16 ];
 	char systemPassword[ 16 ];
+	uint8_t firstVersion;
+	uint8_t secondVersion;
+	uint16_t thridVersion;
 
 	//-------------------------------------------------------------------------------
 	uint8_t readAPconfig(char *ssid, char *key)
@@ -384,6 +387,12 @@ namespace esp {
 				strcat( esp::pageBuff, "\"" );
 			}
 
+			strcat( esp::pageBuff, "\",\"version\": [" );
+			itoa( esp::firstVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
+			strcat( esp::pageBuff, "," );itoa( esp::secondVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
+			strcat( esp::pageBuff, "," );itoa( esp::thridVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
+			strcat( esp::pageBuff, "]" );
+
 			strcat( esp::pageBuff, "}" );
 
 			webServer->send ( 200, "application/json", esp::pageBuff );
@@ -403,7 +412,7 @@ namespace esp {
 		webServer->on( "/index.js", [ webServer ](void){
 			esp::webSendFile( webServer, "/index.js", "text/javascript" );
 		} );
-		webServer->on( "/update", HTTPMethod::HTTP_POST, [ webServer ](void){
+		webServer->on( "/update", HTTPMethod::HTTP_PUT, [ webServer ](void){
 			if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
 				esp::updateProcess( webServer );
 			}
@@ -919,6 +928,7 @@ namespace esp {
 					esp::flags.updateError = 1;
 				}
 			}else if( upload.name == ESP_FIRMWARE_FILENAME ){
+				ESP_DEBUG( "Update begin\n" );
 				uint32_t maxSketchSpace = ( ESP.getFreeSketchSpace() - 0x1000 ) & 0xFFFFF000;
 				//start with max available size
 				if( !Update.begin( maxSketchSpace, U_FLASH ) ){
@@ -943,6 +953,14 @@ namespace esp {
 			ESP_DEBUG( "Update was aborted\n" );
 			webServer->send ( 500, "text/html", "update aborted" );
 		}
+	}
+
+	//-------------------------------------------------------------------------------
+	void setVersion(const uint8_t first, const uint8_t second, const uint16_t thrid)
+	{
+		esp::firstVersion = first;
+		esp::secondVersion = second;
+		esp::thridVersion = thrid;
 	}
 
 	//-------------------------------------------------------------------------------

@@ -55,6 +55,10 @@ namespace esp {
 	extern const char* pageBottom;
 	extern char* pageBuff;
 	extern char tmpVal[ 11 ];
+	extern uint8_t firstVersion;
+	extern uint8_t secondVersion;
+	extern uint16_t thridVersion;
+	
 	/**
 	 * read ssid and key for AP from spi fs
 	 * @param {char*} ssid
@@ -292,6 +296,14 @@ namespace esp {
 #elif defined(ARDUINO_ARCH_ESP32)
 	void updateProcess(WebServer *webServer);
 #endif
+	/**
+	 * Set application version
+	 * @param {const uint8_t} first version <FIRST>.1.256
+	 * @param {const uint8_t} second version 0.<SECOND>.256
+	 * @param {const uint16_t} thrid version 0.1.<THRID>
+	 * @return {none}
+	 */
+	void setVersion(const uint8_t first = 0, const uint8_t second = 1, const uint16_t thrid = 0);
 }
 
 //-------------------------------------------------------------------------------
