@@ -355,12 +355,11 @@ namespace esp {
 			}
 
 
-			strcpy( esp::pageBuff, "{ \"cpu_freq\": \"" );
+			strcpy( esp::pageBuff, "{ \"cpu_freq\": " );
 			utoa( ESP.getCpuFreqMHz(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
-			strcat( esp::pageBuff, "\"" );
 
 			if( esp::flags.useFS ){
-				strcat( esp::pageBuff, ",\"fs_total\": \"" );
+				strcat( esp::pageBuff, ",\"fs_total\": " );
 #if defined(ARDUINO_ARCH_ESP8266)
 				FSInfo64 info;
 				bool resInfo = LittleFS.info64( info );
@@ -373,7 +372,7 @@ namespace esp {
 #elif defined(ARDUINO_ARCH_ESP32)
 				utoa( SPIFFS.totalBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 #endif
-				strcat( esp::pageBuff, "\",\"fs_used\": \"" );
+				strcat( esp::pageBuff, ",\"fs_used\": " );
 #if defined(ARDUINO_ARCH_ESP8266)
 				if( resInfo ){
 					itoa( info.usedBytes, esp::tmpVal, 10 );
@@ -384,10 +383,9 @@ namespace esp {
 #elif defined(ARDUINO_ARCH_ESP32)
 				utoa( SPIFFS.usedBytes(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 #endif
-				strcat( esp::pageBuff, "\"" );
 			}
 
-			strcat( esp::pageBuff, "\",\"version\": [" );
+			strcat( esp::pageBuff, ",\"version\": [" );
 			itoa( esp::firstVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
 			strcat( esp::pageBuff, "," );itoa( esp::secondVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
 			strcat( esp::pageBuff, "," );itoa( esp::thridVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
