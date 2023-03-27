@@ -246,6 +246,7 @@ namespace esp {
 		WiFi.disconnect();
 		WiFi.hostname( hostname );
 		WiFi.mode( WiFiMode_t::WIFI_AP );
+		WiFi.persistent( false );
 		
 		bool res = WiFi.softAP( hostname, "1234567890" );
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -274,8 +275,8 @@ namespace esp {
 		WiFi.softAPdisconnect( true );
 		WiFi.mode( WiFiMode_t::WIFI_STA );
 		WiFi.setAutoReconnect( false );
-		WiFi.setAutoConnect( true );
-		// WiFi.persistent( true );
+		WiFi.setAutoConnect( false );
+		WiFi.persistent( false );
 
 		if( esp::readSTAconfig( ssid, skey ) ){
 			ESP_DEBUG( "Connect to %s\n", ssid );
