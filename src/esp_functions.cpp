@@ -274,7 +274,7 @@ namespace esp {
 
 		WiFi.softAPdisconnect( true );
 		WiFi.mode( WiFiMode_t::WIFI_STA );
-		WiFi.setAutoReconnect( false );
+		WiFi.setAutoReconnect( true );
 		WiFi.setAutoConnect( false );
 		WiFi.persistent( false );
 
