@@ -25,6 +25,7 @@ namespace esp {
 	char tmpVal[ 11 ];
 	char systemLogin[ 16 ];
 	char systemPassword[ 16 ];
+	char updateKey[ 32 ];
 	uint8_t firstVersion;
 	uint8_t secondVersion;
 	uint16_t thridVersion;
@@ -411,11 +412,6 @@ namespace esp {
 		webServer->on( "/index.js", [ webServer ](void){
 			esp::webSendFile( webServer, "/index.js", "text/javascript" );
 		} );
-		webServer->on( "/update", HTTPMethod::HTTP_PUT, [ webServer ](void){
-			if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
-				esp::updateProcess( webServer );
-			}
-		} );
 
 		webServer->on( "/format", [ webServer ](void){
 			if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
@@ -445,6 +441,31 @@ namespace esp {
 
 			esp::flags.captivePortal = 1;
 		}
+	}
+
+	//-------------------------------------------------------------------------------
+#if defined(ARDUINO_ARCH_ESP8266)
+	void addWebUpdate(ESP8266WebServer *webServer, const char* key)
+#elif defined(ARDUINO_ARCH_ESP32)
+	void addWebUpdate(WebServer *webServer, const char* key)
+#endif
+	{
+		strcpy( esp::updateKey, key );
+		webServer->on( "/update", HTTP_POST, [ webServer ](void){
+			webServer->sendHeader( "Connection", "close" );
+    		webServer->send( 200, "text/plain", ( Update.hasError() ) ? "FAIL" : "OK" );
+			if( !esp::flags.updateError ){
+				delay( 1000 );
+				ESP.restart();
+			}
+		}, [ webServer ](void){
+			// webServer->sendHeader( "Access-Control-Allow-Origin", "*" );
+			// if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
+				esp::updateProcess( webServer );
+			// }else{
+				// webServer->send( 403, "text/plain", "Access denied" );
+			// }
+		} );
 	}
 
 	//-------------------------------------------------------------------------------
@@ -906,6 +927,71 @@ namespace esp {
 #endif
 	{
 		HTTPUpload& upload = webServer->upload();
+		if( upload.status == UPLOAD_FILE_START ){
+			esp::flags.updateError = 0;
+			esp::flags.updateFirmware = 0;
+			ESP_DEBUG( "Update: %s [ %s ]\n", upload.filename.c_str(), upload.name.c_str() );
+
+			if( webServer->hasArg( "sdf" ) ){
+				ESP_DEBUG( "[%s/%s]\n", webServer->arg( "sdf" ).c_str(), esp::updateKey );
+				if( strcmp( webServer->arg( "sdf" ).c_str(), esp::updateKey ) == 0 ){
+					if( upload.name == "firmware" && upload.filename == ESP_FIRMWARE_FILENAME ){
+						ESP_DEBUG( "Update begin\n" );
+						esp::flags.updateFirmware = 1;
+
+						if( !Update.begin( UPDATE_SIZE_UNKNOWN ) ){ //start with max available size
+							Update.printError( Serial );
+							webServer->send ( 500, "text/html", "update begin fs error" );
+							esp::flags.updateError = 1;
+							esp::flags.updateFirmware = 0;
+						}
+					}else{
+						ESP_DEBUG( "Unknown update\n" );
+						webServer->send ( 500, "text/html", "Unknown update: error" );
+						esp::flags.updateError = 1;
+					}
+				}else{
+					ESP_DEBUG( "Unknown key\n" );
+					webServer->send ( 500, "text/html", "Update: Unknown key :(" );
+					esp::flags.updateError = 1;
+				}
+			}else{
+				ESP_DEBUG( "Unknown key\n" );
+				webServer->send ( 500, "text/html", "Update: Unknown key :(" );
+				esp::flags.updateError = 1;
+			}
+		}else if( upload.status == UPLOAD_FILE_WRITE ){
+			// flashing firmware to ESP
+			if( !esp::flags.updateError && esp::flags.updateFirmware ){
+				if( Update.write( upload.buf, upload.currentSize ) != upload.currentSize ){
+					Update.printError( Serial );
+					webServer->send ( 500, "text/html", "update error" );
+					esp::flags.updateError = 1;
+				}
+			}
+		}else if( upload.status == UPLOAD_FILE_END ){
+			// finish flashing firmware to ESP
+			if( !esp::flags.updateError && esp::flags.updateFirmware ){
+				if( Update.end( true ) ){ //true to set the size to the current progress
+					ESP_DEBUG( "Update Success: %u\nRebooting...\n", upload.totalSize );
+				}else{
+					Update.printError( Serial );
+					webServer->send ( 500, "text/html", "update error 2" );
+					esp::flags.updateError = 1;
+				}
+			}
+		}else if( upload.status == UPLOAD_FILE_ABORTED ){
+			Update.end();
+			ESP_DEBUG( "Update was aborted\n" );
+			webServer->send ( 500, "text/html", "update aborted" );
+			esp::flags.updateError = 1;
+		}
+
+		
+		/*
+		HTTPUpload& upload = webServer->upload();
+
+		ESP_DEBUG( "updateProcess [%s][%s] %d %d/%d\n", upload.name, upload.filename, upload.status, upload.currentSize, upload.totalSize );
 
 		if( upload.status == UPLOAD_FILE_START ){
 			esp::flags.updateError = 0;
@@ -926,7 +1012,7 @@ namespace esp {
 					webServer->send ( 500, "text/html", "update begin fs error" );
 					esp::flags.updateError = 1;
 				}
-			}else if( upload.name == ESP_FIRMWARE_FILENAME ){
+			}else if( upload.name == "firmware" && upload.filename == ESP_FIRMWARE_FILENAME ){
 				ESP_DEBUG( "Update begin\n" );
 				uint32_t maxSketchSpace = ( ESP.getFreeSketchSpace() - 0x1000 ) & 0xFFFFF000;
 				//start with max available size
@@ -952,6 +1038,7 @@ namespace esp {
 			ESP_DEBUG( "Update was aborted\n" );
 			webServer->send ( 500, "text/html", "update aborted" );
 		}
+		*/
 	}
 
 	//-------------------------------------------------------------------------------

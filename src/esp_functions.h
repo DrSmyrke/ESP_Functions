@@ -15,6 +15,9 @@
 #define SYSTEM_LOGIN							"admin"
 #define SYSTEM_PASSWORD							"admin"
 #define ESP_AUTH_REALM							"Dr.Smyrke TECH"
+#ifndef DEFAULT_UPDATE_KEY
+	#define DEFAULT_UPDATE_KEY					""
+#endif
 
 //-------------------------------------------------------------------------------
 #include <stdint.h>
@@ -47,6 +50,7 @@ namespace esp {
 		unsigned char autoUpdate: 1;
 		unsigned char useFS: 1;
 		unsigned char updateError: 1;
+		unsigned char updateFirmware: 1;
 	} Flags;
 	extern Flags flags;
 	extern int8_t countNetworks;
@@ -172,6 +176,16 @@ namespace esp {
 	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, ESP8266WebServer::THandlerFunction cp_handler = nullptr, const String &captiveRedirectTarget = "/wifi");
 #elif defined(ARDUINO_ARCH_ESP32)
 	void addWebServerPages(WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, WebServer::THandlerFunction cp_handler = nullptr, const String &captiveRedirectTarget = "/wifi");
+#endif
+	/**
+	 * add web server update logic
+	 * @param {WebServer*} pointer
+	 * @return none
+	 */
+#if defined(ARDUINO_ARCH_ESP8266)
+	void addWebUpdate(ESP8266WebServer *webServer, const char* key = DEFAULT_UPDATE_KEY);
+#elif defined(ARDUINO_ARCH_ESP32)
+	void addWebUpdate(WebServer *webServer, const char* key = DEFAULT_UPDATE_KEY);
 #endif
 	/**
 	 * web config page
