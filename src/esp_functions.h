@@ -18,6 +18,9 @@
 #ifndef DEFAULT_UPDATE_KEY
 	#define DEFAULT_UPDATE_KEY					""
 #endif
+#ifndef UPDATE_SIZE_UNKNOWN
+	#define UPDATE_SIZE_UNKNOWN					0xFFFFFFFF
+#endif
 
 //-------------------------------------------------------------------------------
 #include <stdint.h>
