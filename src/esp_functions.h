@@ -180,6 +180,7 @@ namespace esp {
 	/**
 	 * add web server update logic
 	 * @param {WebServer*} pointer
+	 * @param {const char*} key (default: #define DEFAULT_UPDATE_KEY)
 	 * @return none
 	 */
 #if defined(ARDUINO_ARCH_ESP8266)
