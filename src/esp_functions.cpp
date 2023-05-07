@@ -29,6 +29,7 @@ namespace esp {
 	uint8_t firstVersion;
 	uint8_t secondVersion;
 	uint16_t thridVersion;
+	File updateFile;
 
 	//-------------------------------------------------------------------------------
 	uint8_t readAPconfig(char *ssid, char *key)
@@ -454,7 +455,7 @@ namespace esp {
 		webServer->on( "/update", HTTP_POST, [ webServer ](void){
 			webServer->sendHeader( "Connection", "close" );
     		webServer->send( 200, "text/plain", ( Update.hasError() ) ? "FAIL" : "OK" );
-			if( !esp::flags.updateError ){
+			if( !esp::flags.updateError && esp::flags.updateFirmware ){
 				delay( 1000 );
 				ESP.restart();
 			}
@@ -930,6 +931,7 @@ namespace esp {
 		if( upload.status == UPLOAD_FILE_START ){
 			esp::flags.updateError = 0;
 			esp::flags.updateFirmware = 0;
+			esp::flags.updateFile = 0;
 			ESP_DEBUG( "Update: %s [ %s ]\n", upload.filename.c_str(), upload.name.c_str() );
 
 			if( webServer->hasArg( "sdf" ) ){
@@ -944,6 +946,18 @@ namespace esp {
 							webServer->send ( 500, "text/html", "update begin fs error" );
 							esp::flags.updateError = 1;
 							esp::flags.updateFirmware = 0;
+						}
+					}else if( upload.name == "file" ){
+						String path = "/" + upload.filename;
+#if defined(ARDUINO_ARCH_ESP8266)
+						updateFile = LittleFS.open( path, "w" );
+#elif defined(ARDUINO_ARCH_ESP32)
+						updateFile = SPIFFS.open( path, "w" );
+#endif
+						if( updateFile ){
+							esp::flags.updateFile = 1;
+						}else{
+							esp::flags.updateError = 1;
 						}
 					}else{
 						ESP_DEBUG( "Unknown update\n" );
@@ -968,6 +982,12 @@ namespace esp {
 					webServer->send ( 500, "text/html", "update error" );
 					esp::flags.updateError = 1;
 				}
+			}else if( !esp::flags.updateError && esp::flags.updateFile ){
+				if( updateFile ){
+					updateFile.write( upload.buf, upload.currentSize );
+				}else{
+					esp::flags.updateError = 1;
+				}
 			}
 		}else if( upload.status == UPLOAD_FILE_END ){
 			// finish flashing firmware to ESP
@@ -978,6 +998,11 @@ namespace esp {
 					Update.printError( Serial );
 					webServer->send ( 500, "text/html", "update error 2" );
 					esp::flags.updateError = 1;
+				}
+			}else if( !esp::flags.updateError && esp::flags.updateFile ){
+				if( updateFile ){
+					// if( upload.currentSize ) updateFile.write( upload.buf, upload.currentSize );
+					updateFile.close();
 				}
 			}
 		}else if( upload.status == UPLOAD_FILE_ABORTED ){

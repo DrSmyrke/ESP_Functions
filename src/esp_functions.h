@@ -54,6 +54,7 @@ namespace esp {
 		unsigned char useFS: 1;
 		unsigned char updateError: 1;
 		unsigned char updateFirmware: 1;
+		unsigned char updateFile: 1;
 	} Flags;
 	extern Flags flags;
 	extern int8_t countNetworks;
