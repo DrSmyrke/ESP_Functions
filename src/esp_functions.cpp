@@ -509,7 +509,7 @@ namespace esp {
 				SPIFFS.remove( ESP_STA_CONFIG_FILE );
 				SPIFFS.remove( ESP_AP_CONFIG_FILE );
 #endif
-				webServer->send ( 200, "text/html", "OK" );
+				webServer->send ( 200, "text/html", "Rebooting..." );
 				delay( 1000 );
 				ESP.restart();
 			}
@@ -561,7 +561,7 @@ namespace esp {
 				strcat( pageBuff, "</tr>" );
 				strcat( pageBuff, "<tr>" );
 					strcat( pageBuff, "<td align='center'><input type='submit' value='Save & Connect'></td>" );
-					strcat( pageBuff, "<td align='center'><input type='button' value='Remove WiFi settings' onClick=\"this.form.sta_config.value=2;this.form.submit();alert('Rebooting...');\"></td>" );
+					strcat( pageBuff, "<td align='center'><input type='button' value='Remove WiFi settings' onClick=\"this.form.sta_config.value=2;this.form.submit();\"></td>" );
 				strcat( pageBuff, "</tr>" );
 			strcat( pageBuff, "</table>" );
 		strcat( pageBuff, "</form>" );
