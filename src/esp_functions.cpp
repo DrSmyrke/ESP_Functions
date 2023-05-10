@@ -478,27 +478,43 @@ namespace esp {
 	{
 		//-------------------------------------------------------------
 		if( webServer->hasArg( "sta_config" ) && webServer->hasArg( "ssid" ) && webServer->hasArg( "key" ) ){
-			if( webServer->arg( "ssid" ).length() > 0 ){
-				if( webServer->hasArg( "format" ) ){
-					if( webServer->arg( "format" ) == "on" ){
-						ESP_DEBUG( "Format Filesystem...\n" );
+			uint8_t sta_config = webServer->arg( "sta_config" ).toInt();
+			if( sta_config == 1 ){
+				if( webServer->arg( "ssid" ).length() > 0 ){
+					if( webServer->hasArg( "format" ) ){
+						if( webServer->arg( "format" ) == "on" ){
+							ESP_DEBUG( "Format Filesystem...\n" );
 #if defined(ARDUINO_ARCH_ESP8266)
-						LittleFS.format();
+							LittleFS.format();
 #elif defined(ARDUINO_ARCH_ESP32)
-						SPIFFS.format();
+							SPIFFS.format();
 #endif
+						}
 					}
+					if( !esp::saveConfig( webServer->arg( "ssid" ).c_str(), webServer->arg( "key" ).c_str(), esp::STA_MODE ) ){
+						webServer->client().write( "ERROR" );
+						webServer->client().stop();
+					}else{
+						webServer->send ( 200, "text/html", "OK" );
+						esp::flags.captivePortalAccess = 1;
+						ESP.restart();
+					}
+					return;
 				}
-				if( !esp::saveConfig( webServer->arg( "ssid" ).c_str(), webServer->arg( "key" ).c_str(), esp::STA_MODE ) ){
-					webServer->client().write( "ERROR" );
-					webServer->client().stop();
-				}else{
-					webServer->send ( 200, "text/html", "OK" );
-					esp::flags.captivePortalAccess = 1;
-					ESP.restart();
-				}
-				return;
+			}else if( sta_config == 2 && esp::flags.useFS ){
+#if defined(ARDUINO_ARCH_ESP8266)
+				LittleFS.remove( ESP_STA_CONFIG_FILE );
+				LittleFS.remove( ESP_AP_CONFIG_FILE );
+#elif defined(ARDUINO_ARCH_ESP32)
+				SPIFFS.remove( ESP_STA_CONFIG_FILE );
+				SPIFFS.remove( ESP_AP_CONFIG_FILE );
+#endif
+				webServer->send ( 200, "text/html", "OK" );
+				delay( 1000 );
+				ESP.restart();
 			}
+
+			webServer->send ( 200, "text/html", "OK" );
 		}
 		//-------------------------------------------------------------
 		esp::setNoCacheContent( webServer );
@@ -521,15 +537,14 @@ namespace esp {
 				strcat( pageBuff, "<tr>" );
 					strcat( pageBuff, "<td>SSID:</td>" );
 					strcat( pageBuff, "<td>" );
-						strcat( pageBuff, "<select name='ssid'>" );
+						strcat( pageBuff, "<input type=\"text\" name=\"ssid\" list=\"networks\">" );
+						strcat( pageBuff, "<datalist  id=\"networks\">" );
 							for( uint8_t i = 0; i < esp::countNetworks; i++ ){
 								strcat( pageBuff, "<option value=\"" );
 								strcat( pageBuff, WiFi.SSID( i ).c_str() );
-								strcat( pageBuff, "\">" );
-								strcat( pageBuff, WiFi.SSID( i ).c_str() );
-								strcat( pageBuff, "</option>" );
+								strcat( pageBuff, "\"/>" );
 							}
-						strcat( pageBuff, "</select>" );
+						strcat( pageBuff, "</datalist>" );
 					strcat( pageBuff, "</td>" );
 				strcat( pageBuff, "</tr>" );
 				strcat( pageBuff, "<tr>" );
@@ -545,7 +560,8 @@ namespace esp {
 					strcat( pageBuff, "</td>" );
 				strcat( pageBuff, "</tr>" );
 				strcat( pageBuff, "<tr>" );
-					strcat( pageBuff, "<td colspan='2' align='center'><input type='submit' value='Save & connect'></td>" );
+					strcat( pageBuff, "<td align='center'><input type='submit' value='Save & Connect'></td>" );
+					strcat( pageBuff, "<td align='center'><input type='button' value='Remove WiFi settings' onClick=\"this.form.sta_config.value=2;this.form.submit();alert('Rebooting...');\"></td>" );
 				strcat( pageBuff, "</tr>" );
 			strcat( pageBuff, "</table>" );
 		strcat( pageBuff, "</form>" );

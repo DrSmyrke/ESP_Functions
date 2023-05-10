@@ -81,7 +81,7 @@ namespace esp {
 	 * @param {uint8_t} mode
 	 * @return {uint8_t} result ( 1 - success, 0 - error )
 	 */
-	uint8_t saveConfig(const char *ssid, const char *key, uint8_t mode);
+	uint8_t saveConfig(const char *ssid, const char *key, uint8_t mode = esp::STA_MODE);
 	/**
 	 * checking acces from web
 	 * @param {WebServer*} user
