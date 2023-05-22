@@ -18,6 +18,9 @@
 #ifndef DEFAULT_UPDATE_KEY
 	#define DEFAULT_UPDATE_KEY					""
 #endif
+#ifndef DEFAULT_AP_KEY
+	#define DEFAULT_AP_KEY						"1234567890"
+#endif
 #ifndef UPDATE_SIZE_UNKNOWN
 	#define UPDATE_SIZE_UNKNOWN					0xFFFFFFFF
 #endif
@@ -42,12 +45,15 @@
 
 //-------------------------------------------------------------------------------
 namespace esp {
-	enum{
-		STA_MODE,
-		AP_MODE,
+	struct Mode{
+		enum{
+			UNKNOWN,
+			STA,
+			AP,
+			NO_WIFI,
+		};
 	};
 	typedef struct {
-		unsigned char ap_mode: 1;
 		unsigned char captivePortal: 1;
 		unsigned char captivePortalAccess: 1;
 		unsigned char autoUpdate: 1;
@@ -68,20 +74,19 @@ namespace esp {
 	extern uint16_t thridVersion;
 	
 	/**
-	 * read ssid and key for AP from spi fs
+	 * read ssid and key from spi fs
 	 * @param {char*} ssid
 	 * @param {char*} key
 	 * @return {uint8_t} result ( 1 - success, 0 - error )
 	 */
-	uint8_t readAPconfig(char *ssid, char *key);
+	uint8_t readConfig(char *ssid, char *key);
 	/**
 	 * save ssid and key from spi fs
 	 * @param {char*} ssid
 	 * @param {char*} key
-	 * @param {uint8_t} mode
 	 * @return {uint8_t} result ( 1 - success, 0 - error )
 	 */
-	uint8_t saveConfig(const char *ssid, const char *key, uint8_t mode = esp::STA_MODE);
+	uint8_t saveConfig(const char *ssid, const char *key);
 	/**
 	 * checking acces from web
 	 * @param {WebServer*} user
@@ -96,18 +101,6 @@ namespace esp {
 #elif defined(ARDUINO_ARCH_ESP32)
 	uint8_t checkWebAuth(WebServer *webServer, const char *user, const char *password, const char *realm, const char *failMess);
 #endif
-	/**
-	 * checking STA or AP mode
-	 * @return none
-	 */
-	uint8_t isClient(void);
-	/**
-	 * read ssid and key for STA from spi fs
-	 * @param {char*} ssid
-	 * @param {char*} key
-	 * @return {uint8_t} result ( 1 - success, 0 - error )
-	 */
-	uint8_t readSTAconfig(char *ssid, char *key);
 	/**
 	 * remove from spi fs
 	 * @param {char*} filepath
@@ -172,14 +165,12 @@ namespace esp {
 	 * @param {WebServer*} pointer
 	 * @param {bool} wifi config page (default: true)
 	 * @param {bool} not found page (default: true)
-	 * @param {bool} captive portal alorythm (default: false)
-	 * @param {HandlerFunction} hanler function to Captive portal page (default: nullptr)
 	 * @return none
 	 */
 #if defined(ARDUINO_ARCH_ESP8266)
-	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, ESP8266WebServer::THandlerFunction cp_handler = nullptr, const String &captiveRedirectTarget = "/wifi");
+	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig = true, bool notFound = true);
 #elif defined(ARDUINO_ARCH_ESP32)
-	void addWebServerPages(WebServer *webServer, bool wifiConfig = true, bool notFound = true, bool captivePortal = false, WebServer::THandlerFunction cp_handler = nullptr, const String &captiveRedirectTarget = "/wifi");
+	void addWebServerPages(WebServer *webServer, bool wifiConfig = true, bool notFound = true);
 #endif
 	/**
 	 * add web server update logic
@@ -191,6 +182,17 @@ namespace esp {
 	void addWebUpdate(ESP8266WebServer *webServer, const char* key = DEFAULT_UPDATE_KEY);
 #elif defined(ARDUINO_ARCH_ESP32)
 	void addWebUpdate(WebServer *webServer, const char* key = DEFAULT_UPDATE_KEY);
+#endif
+	/**
+	 * Activate web server Captive Portal logic
+	 * @param {WebServer*} pointer
+	 * @param {HandlerFunction} hanler function to Captive portal page (default: nullptr)
+	 * @return none
+	 */
+#if defined(ARDUINO_ARCH_ESP8266)
+	void activateCaptivePortal(ESP8266WebServer *webServer, const char* captiveRedirectTarget = "/", ESP8266WebServer::THandlerFunction cp_handler = nullptr);
+#elif defined(ARDUINO_ARCH_ESP32)
+	void activateCaptivePortal(WebServer *webServer, const char* captiveRedirectTarget = "/", WebServer::THandlerFunction cp_handler = nullptr);
 #endif
 	/**
 	 * web config page
@@ -323,6 +325,22 @@ namespace esp {
 	 * @return {none}
 	 */
 	void setVersion(const uint8_t first = 0, const uint8_t second = 1, const uint16_t thrid = 0);
+	/**
+	 * Update mode value (internal method !!!)
+	 * @return {none}
+	 */
+	void updateMode(void);
+	/**
+	 * Get mode value
+	 * @return {uint8_t} esp::Mode enum
+	 */
+	uint8_t getMode(void);
+	/**
+	 * Set mode value
+	 * @param {const uint8_t} value must be lower at esp::Mode enum
+	 * @return {none}
+	 */
+	void setMode(const uint8_t value);
 }
 
 //-------------------------------------------------------------------------------

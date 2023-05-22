@@ -22,6 +22,8 @@ namespace esp {
 	const char* pageEndTop = nullptr;
 	const char* pageBottom = nullptr;
 	char* pageBuff = nullptr;
+	char* file_AP_config_Ptr = ESP_AP_CONFIG_FILE;
+	char* file_STA_config_Ptr = ESP_STA_CONFIG_FILE;
 	char tmpVal[ 11 ];
 	char systemLogin[ 16 ];
 	char systemPassword[ 16 ];
@@ -29,20 +31,29 @@ namespace esp {
 	uint8_t firstVersion;
 	uint8_t secondVersion;
 	uint16_t thridVersion;
+	uint8_t mode;
 	File updateFile;
 
 	//-------------------------------------------------------------------------------
-	uint8_t readAPconfig(char *ssid, char *key)
+	uint8_t readConfig(char *ssid, char *key)
 	{
 		uint8_t result = 0;
+		char* filePtr = nullptr;
+
+		if( esp::isFileExists( ESP_AP_CONFIG_FILE ) ) filePtr = file_AP_config_Ptr;
+		if( esp::isFileExists( ESP_STA_CONFIG_FILE ) ) filePtr = file_STA_config_Ptr;
+
+		if( !esp::flags.useFS ) return result;
+		if( filePtr == nullptr ) return result;
+		
 		uint8_t ssidLen = 0;
 		uint8_t keyLen = 0;
 
-		if( esp::isFileExists( ESP_AP_CONFIG_FILE ) ){
+		if( esp::isFileExists( filePtr ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
-			File f = LittleFS.open( ESP_AP_CONFIG_FILE, "r");
+			File f = LittleFS.open( filePtr, "r" );
 #elif defined(ARDUINO_ARCH_ESP32)
-			File f = SPIFFS.open( ESP_AP_CONFIG_FILE, "r");
+			File f = SPIFFS.open( filePtr, "r" );
 #endif
 			if( f ){
 				bool first = true;
@@ -76,14 +87,21 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	uint8_t saveConfig(const char *ssid, const char *key, uint8_t mode)
+	uint8_t saveConfig(const char *ssid, const char *key)
 	{
 		uint8_t result = 0;
+		char* filePtr = nullptr;
+
+		if( esp::isFileExists( ESP_AP_CONFIG_FILE ) ) filePtr = file_AP_config_Ptr;
+		if( esp::isFileExists( ESP_STA_CONFIG_FILE ) ) filePtr = file_STA_config_Ptr;
+
 		if( !esp::flags.useFS ) return result;
+		if( filePtr == nullptr ) return result;
+
 #if defined(ARDUINO_ARCH_ESP8266)
-		File f = LittleFS.open( ( mode == esp::AP_MODE ) ? ESP_AP_CONFIG_FILE : ESP_STA_CONFIG_FILE, "w");
+		File f = LittleFS.open( filePtr, "w") ;
 #elif defined(ARDUINO_ARCH_ESP32)
-		File f = SPIFFS.open( ( mode == esp::AP_MODE ) ? ESP_AP_CONFIG_FILE : ESP_STA_CONFIG_FILE, "w");
+		File f = SPIFFS.open( filePtr, "w" );
 #endif
 		if( f ){
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -118,56 +136,6 @@ namespace esp {
 		}
 
 		return 1;
-	}
-
-	//-------------------------------------------------------------------------------
-	uint8_t isClient(void)
-	{
-		return esp::isFileExists( ESP_STA_CONFIG_FILE ) ? 1 : 0;
-	}
-
-	//-------------------------------------------------------------------------------
-	uint8_t readSTAconfig(char *ssid, char *key)
-	{
-		uint8_t result = 0;
-		uint8_t ssidLen = 0;
-		uint8_t keyLen = 0;
-
-		if( esp::isFileExists( ESP_STA_CONFIG_FILE ) ){
-#if defined(ARDUINO_ARCH_ESP8266)
-			File f = LittleFS.open( ESP_STA_CONFIG_FILE, "r");
-#elif defined(ARDUINO_ARCH_ESP32)
-			File f = SPIFFS.open( ESP_STA_CONFIG_FILE, "r");
-#endif
-			if( f ){
-				bool first = true;
-				while( f.available() ){
-					char sym;
-					f.readBytes( &sym, 1 );
-					if( first ){
-						if( sym == '\n' ){
-							first = false;
-							ssid[ ssidLen ] = '\0';
-							continue;
-						}
-						if( ssidLen >= ESP_CONFIG_SSID_MAX_LEN ) break;
-						ssid[ ssidLen++ ] = sym;
-					}else{
-						if( sym == '\n' ){
-							key[ keyLen ] = '\0';
-							break;
-						}
-						if( keyLen >= ESP_CONFIG_KEY_MAX_LEN ) break;
-						key[ keyLen++ ] = sym;
-					}
-				}
-				f.close();
-			}
-		}
-
-		if( ssidLen > 2 && keyLen >= 8 ) result = 1;
-
-		return result;
 	}
 
 	//-------------------------------------------------------------------------------
@@ -233,9 +201,9 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	bool wifi_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
 	{
-		if( esp::isClient() ){
+		if( esp::mode == esp::Mode::STA ){
 			return wifi_STA_init( hostname );
-		}else{
+		}else if( esp::mode == esp::Mode::AP ){
 			return wifi_AP_init( hostname, ip, gateway, mask );
 		}
 	}
@@ -243,6 +211,11 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	bool wifi_AP_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
 	{
+		ESP_DEBUG( "ESP: AP MODE INIT...\n" );
+
+		char ssid[ ESP_CONFIG_SSID_MAX_LEN ];
+		char skey[ ESP_CONFIG_KEY_MAX_LEN ];
+
 		esp::countNetworks = WiFi.scanNetworks();
 
 		WiFi.disconnect();
@@ -250,18 +223,21 @@ namespace esp {
 		WiFi.mode( WiFiMode_t::WIFI_AP );
 		WiFi.persistent( false );
 		
-		bool res = WiFi.softAP( hostname, "1234567890" );
+		if( !esp::readConfig( ssid, skey ) ){
+			ESP_DEBUG( "ESP: Can not read AP config file\n" );
+			ESP_DEBUG( "ESP: Set default params\n" );
+			strcpy( ssid, hostname );
+			strcpy( skey, DEFAULT_AP_KEY );
+		}
+
+		bool res = WiFi.softAP( ssid, skey );
 #if defined(ARDUINO_ARCH_ESP8266)
 	
 #elif defined(ARDUINO_ARCH_ESP32)
 		WiFi.softAPConfig( ip, gateway, mask );
 #endif
 
-		delay( 600 );
-
-		esp::flags.ap_mode = 1;
-
-		ESP_DEBUG( "wifi_AP_init IP: %s SSID: %s HOSTNAME: %s\n", WiFi.softAPIP().toString().c_str(), WiFi.softAPSSID().c_str(), hostname );
+		ESP_DEBUG( "ESP: wifi_AP_init IP: %s SSID: %s HOSTNAME: %s\n", WiFi.softAPIP().toString().c_str(), WiFi.softAPSSID().c_str(), hostname );
 
 		return res;
 	}
@@ -269,7 +245,7 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	bool wifi_STA_init(const char* hostname)
 	{
-		ESP_DEBUG( "STA MODE INIT...\n" );
+		ESP_DEBUG( "ESP: STA MODE INIT...\n" );
 
 		char ssid[ ESP_CONFIG_SSID_MAX_LEN ];
 		char skey[ ESP_CONFIG_KEY_MAX_LEN ];
@@ -280,25 +256,22 @@ namespace esp {
 		WiFi.setAutoConnect( false );
 		WiFi.persistent( false );
 
-		if( esp::readSTAconfig( ssid, skey ) ){
-			ESP_DEBUG( "Connect to %s\n", ssid );
+		if( esp::readConfig( ssid, skey ) ){
+			ESP_DEBUG( "ESP: Connect to %s\n", ssid );
 			WiFi.begin( ssid, skey );
 		}else{
-			esp::removeFile( ESP_STA_CONFIG_FILE );
-			ESP.restart();
+			ESP_DEBUG( "ESP: Can not read STA config file\n" );
 			return false;
 		}
 
 		WiFi.hostname( hostname );
 
-		ESP_DEBUG( "WiFi connecting...\n" );
+		ESP_DEBUG( "ESP: WiFi connecting...\n" );
 		uint8_t i = 0;
 		while( !WiFi.isConnected() && i++ < 50 ){
 			delay( 100 );
 			ESP_DEBUG( "." );
 		}
-
-		esp::flags.ap_mode = 0;
 		
 		if( !esp::isWiFiConnection() ){
 			// ESP.restart();
@@ -325,9 +298,9 @@ namespace esp {
 
 	//-------------------------------------------------------------------------------
 #if defined(ARDUINO_ARCH_ESP8266)
-	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig, bool notFound, bool captivePortal, ESP8266WebServer::THandlerFunction cp_handler, const String &captiveRedirectTarget)
+	void addWebServerPages(ESP8266WebServer *webServer, bool wifiConfig, bool notFound)
 #elif defined(ARDUINO_ARCH_ESP32)
-	void addWebServerPages(WebServer *webServer, bool wifiConfig, bool notFound, bool captivePortal, WebServer::THandlerFunction cp_handler, const String &captiveRedirectTarget)
+	void addWebServerPages(WebServer *webServer, bool wifiConfig, bool notFound)
 #endif
 	{
 		if( wifiConfig ){
@@ -337,16 +310,9 @@ namespace esp {
 			} );
 		}
 		if( notFound ){
-			webServer->onNotFound( [ webServer, captiveRedirectTarget ](void){
+			webServer->onNotFound( [ webServer ](void){
 				String uri = webServer->uri();
 				ESP_DEBUG( "WEB 404 [%s]\n", uri.c_str() );
-
-				if( esp::flags.captivePortal && !esp::flags.captivePortalAccess ){
-					String target = ( captiveRedirectTarget.charAt( 0 ) == '/' ) ? WiFi.softAPSSID() + ".lan" + captiveRedirectTarget : captiveRedirectTarget;
-					target.toLowerCase();
-					esp::setWebRedirect( webServer, target );
-					return;
-				}
 				esp::handleWeb404Page( webServer );
 			} );
 		}
@@ -388,6 +354,7 @@ namespace esp {
 #endif
 			}
 
+			strcat( esp::pageBuff, ",\"mode\": " ); utoa( esp::mode, esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 			strcat( esp::pageBuff, ",\"version\": [" );
 			itoa( esp::firstVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
 			strcat( esp::pageBuff, "," );itoa( esp::secondVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
@@ -399,12 +366,8 @@ namespace esp {
 			webServer->send ( 200, "application/json", esp::pageBuff );
 		} );
 
-		webServer->on( "/favicon.ico", [ webServer, captivePortal, cp_handler ](void){
-			if( esp::flags.ap_mode && captivePortal ){
-				captivePortalPage( webServer, cp_handler );
-			}else{
-				esp::webSendFile( webServer, "/favicon.ico", "image/x-icon" );
-			}
+		webServer->on( "/favicon.ico", [ webServer ](void){
+			esp::webSendFile( webServer, "/favicon.ico", "image/x-icon" );
 		} );
 		
 		webServer->on( "/index.css", [ webServer ](void){
@@ -422,26 +385,14 @@ namespace esp {
 				bool res = SPIFFS.format();
 #endif
 				if( res ){
-					webServer->send ( 200, "application/json", "{ \"result\": \"OK\" }" );
+					webServer->send( 200, "application/json", "{ \"result\": \"OK\" }" );
 				}else{
-					webServer->send ( 500, "application/json", "{ \"result\": \"ERROR\" }" );
+					webServer->send( 500, "application/json", "{ \"result\": \"ERROR\" }" );
 				}
 			}else{
-				webServer->send ( 403, "application/json", "{ \"result\": \"access denied\" }" );
+				webServer->send( 403, "application/json", "{ \"result\": \"access denied\" }" );
 			}
 		} );
-
-		if( captivePortal ){
-			webServer->on( "/fwlink", [ webServer, cp_handler ](void){
-				captivePortalPage( webServer, cp_handler );
-			} );
-			webServer->on( "/generate_204", [ webServer, cp_handler ](void){
-				ESP_DEBUG( "WEB GET [404]: %s\n", webServer->header( "Location" ).c_str() );
-				captivePortalPage( webServer, cp_handler );
-			} );
-
-			esp::flags.captivePortal = 1;
-		}
 	}
 
 	//-------------------------------------------------------------------------------
@@ -471,6 +422,34 @@ namespace esp {
 
 	//-------------------------------------------------------------------------------
 #if defined(ARDUINO_ARCH_ESP8266)
+	void activateCaptivePortal(ESP8266WebServer *webServer, const char* captiveRedirectTarget, ESP8266WebServer::THandlerFunction cp_handler)
+#elif defined(ARDUINO_ARCH_ESP32)
+	void activateCaptivePortal(WebServer *webServer, const char* captiveRedirectTarget, WebServer::THandlerFunction cp_handler)
+#endif
+	{
+		webServer->on( "/fwlink", [ webServer, cp_handler ](void){
+			captivePortalPage( webServer, cp_handler );
+		} );
+		webServer->on( "/generate_204", [ webServer, cp_handler ](void){
+			captivePortalPage( webServer, cp_handler );
+		} );
+		webServer->on( "/favicon.ico", [ webServer, cp_handler ](void){
+			captivePortalPage( webServer, cp_handler );
+		} );
+		webServer->onNotFound( [ webServer, captiveRedirectTarget ](void){
+			if( !esp::flags.captivePortalAccess ){
+				String target = WiFi.softAPSSID() + ".lan" + captiveRedirectTarget;
+				target.toLowerCase();
+				esp::setWebRedirect( webServer, target );
+				return;
+			}
+			esp::handleWeb404Page( webServer );
+		} );
+		esp::flags.captivePortal = 1;
+	}
+
+	//-------------------------------------------------------------------------------
+#if defined(ARDUINO_ARCH_ESP8266)
 	void handleWebConfigPage(ESP8266WebServer *webServer)
 #elif defined(ARDUINO_ARCH_ESP32)
 	void handleWebConfigPage(WebServer *webServer)
@@ -491,7 +470,7 @@ namespace esp {
 #endif
 						}
 					}
-					if( !esp::saveConfig( webServer->arg( "ssid" ).c_str(), webServer->arg( "key" ).c_str(), esp::STA_MODE ) ){
+					if( !esp::saveConfig( webServer->arg( "ssid" ).c_str(), webServer->arg( "key" ).c_str() ) ){
 						webServer->client().write( "ERROR" );
 						webServer->client().stop();
 					}else{
@@ -812,7 +791,6 @@ namespace esp {
 			esp::flags.useFS						= ( fs_init_res ) ? 1 : 0;
 		}
 		
-		esp::flags.ap_mode							= 0;
 		esp::flags.captivePortal					= 0;
 		esp::flags.captivePortalAccess				= 0;
 		esp::flags.autoUpdate						= 0;
@@ -825,6 +803,8 @@ namespace esp {
 
 		strcpy( esp::systemLogin, SYSTEM_LOGIN );
 		strcpy( esp::systemPassword, SYSTEM_PASSWORD );
+
+		updateMode();
 	}
 
 	//-------------------------------------------------------------------------------
@@ -1088,6 +1068,28 @@ namespace esp {
 		esp::firstVersion = first;
 		esp::secondVersion = second;
 		esp::thridVersion = thrid;
+	}
+
+	//-------------------------------------------------------------------------------
+	void updateMode(void)
+	{
+		esp::mode = esp::Mode::UNKNOWN;
+
+		if( esp::isFileExists( ESP_AP_CONFIG_FILE ) ) esp::mode = esp::Mode::AP;
+		if( esp::isFileExists( ESP_STA_CONFIG_FILE ) ) esp::mode = esp::Mode::STA;
+	}
+
+	//-------------------------------------------------------------------------------
+	uint8_t getMode(void)
+	{
+		return esp::mode;
+	}
+
+	//-------------------------------------------------------------------------------
+	void setMode(const uint8_t value)
+	{
+		if( value > esp::Mode::NO_WIFI ) return;
+		esp::mode = value;
 	}
 
 	//-------------------------------------------------------------------------------
