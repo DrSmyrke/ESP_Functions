@@ -22,104 +22,16 @@ namespace esp {
 	const char* pageEndTop = nullptr;
 	const char* pageBottom = nullptr;
 	char* pageBuff = nullptr;
-	char* file_AP_config_Ptr = ESP_AP_CONFIG_FILE;
-	char* file_STA_config_Ptr = ESP_STA_CONFIG_FILE;
 	char tmpVal[ 11 ];
 	char systemLogin[ 16 ];
 	char systemPassword[ 16 ];
 	char updateKey[ 32 ];
+	char hostName[ 32 ];
 	uint8_t firstVersion;
 	uint8_t secondVersion;
 	uint16_t thridVersion;
-	uint8_t mode;
+	Data app;
 	File updateFile;
-
-	//-------------------------------------------------------------------------------
-	uint8_t readConfig(char *ssid, char *key)
-	{
-		uint8_t result = 0;
-		char* filePtr = nullptr;
-
-		if( esp::isFileExists( ESP_AP_CONFIG_FILE ) ) filePtr = file_AP_config_Ptr;
-		if( esp::isFileExists( ESP_STA_CONFIG_FILE ) ) filePtr = file_STA_config_Ptr;
-
-		if( !esp::flags.useFS ) return result;
-		if( filePtr == nullptr ) return result;
-		
-		uint8_t ssidLen = 0;
-		uint8_t keyLen = 0;
-
-		if( esp::isFileExists( filePtr ) ){
-#if defined(ARDUINO_ARCH_ESP8266)
-			File f = LittleFS.open( filePtr, "r" );
-#elif defined(ARDUINO_ARCH_ESP32)
-			File f = SPIFFS.open( filePtr, "r" );
-#endif
-			if( f ){
-				bool first = true;
-				while( f.available() ){
-					char sym;
-					f.readBytes( &sym, 1 );
-					if( first ){
-						if( sym == '\n' ){
-							first = false;
-							ssid[ ssidLen ] = '\0';
-							continue;
-						}
-						if( ssidLen >= ESP_CONFIG_SSID_MAX_LEN ) break;
-						ssid[ ssidLen++ ] = sym;
-					}else{
-						if( sym == '\n' ){
-							key[ keyLen ] = '\0';
-							break;
-						}
-						if( keyLen >= ESP_CONFIG_KEY_MAX_LEN ) break;
-						key[ keyLen++ ] = sym;
-					}
-				}
-				f.close();
-			}
-		}
-
-		if( ssidLen > 2 && keyLen >= 8 ) result = 1;
-
-		return result;
-	}
-
-	//-------------------------------------------------------------------------------
-	uint8_t saveConfig(const char *ssid, const char *key)
-	{
-		uint8_t result = 0;
-		char* filePtr = nullptr;
-
-		if( esp::isFileExists( ESP_AP_CONFIG_FILE ) ) filePtr = file_AP_config_Ptr;
-		if( esp::isFileExists( ESP_STA_CONFIG_FILE ) ) filePtr = file_STA_config_Ptr;
-
-		if( !esp::flags.useFS ) return result;
-		if( filePtr == nullptr ) return result;
-
-#if defined(ARDUINO_ARCH_ESP8266)
-		File f = LittleFS.open( filePtr, "w") ;
-#elif defined(ARDUINO_ARCH_ESP32)
-		File f = SPIFFS.open( filePtr, "w" );
-#endif
-		if( f ){
-#if defined(ARDUINO_ARCH_ESP8266)
-			f.write( ssid );
-			f.write( '\n' );
-			f.write( key );
-#elif defined(ARDUINO_ARCH_ESP32)
-			f.write( (uint8_t*)ssid, strlen( ssid ) );
-			f.write( '\n' );
-			f.write( (uint8_t*)key, strlen( key ) );
-#endif
-			f.write( '\n' );
-			f.close();
-			result = 1;
-		}
-
-		return result;
-	}
 
 	//-------------------------------------------------------------------------------
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -199,51 +111,41 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	bool wifi_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
+	bool wifi_init(const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
 	{
-		if( esp::mode == esp::Mode::STA ){
-			return wifi_STA_init( hostname );
-		}else if( esp::mode == esp::Mode::AP ){
-			return wifi_AP_init( hostname, ip, gateway, mask );
+		if( esp::app.mode == esp::Mode::STA ){
+			return wifi_STA_init();
+		}else if( esp::app.mode == esp::Mode::AP ){
+			return wifi_AP_init(ip, gateway, mask );
 		}
 	}
 
 	//-------------------------------------------------------------------------------
-	bool wifi_AP_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
+	bool wifi_AP_init(const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
 	{
 		ESP_DEBUG( "ESP: AP MODE INIT...\n" );
-
-		char ssid[ ESP_CONFIG_SSID_MAX_LEN ];
-		char skey[ ESP_CONFIG_KEY_MAX_LEN ];
 
 		esp::countNetworks = WiFi.scanNetworks();
 
 		WiFi.disconnect();
-		WiFi.hostname( hostname );
+		WiFi.hostname( esp::hostName );
 		WiFi.mode( WiFiMode_t::WIFI_AP );
 		WiFi.persistent( false );
-		
-		if( !esp::readConfig( ssid, skey ) ){
-			ESP_DEBUG( "ESP: Can not read AP config file\n" );
-			ESP_DEBUG( "ESP: Set default params\n" );
-			strcpy( ssid, hostname );
-			strcpy( skey, DEFAULT_AP_KEY );
-		}
 
-		bool res = WiFi.softAP( ssid, skey );
+		bool res = WiFi.softAP( esp::app.ap_ssid, esp::app.ap_key );
 #if defined(ARDUINO_ARCH_ESP8266)
 	
 #elif defined(ARDUINO_ARCH_ESP32)
 		WiFi.softAPConfig( ip, gateway, mask );
 #endif
 
-		ESP_DEBUG( "ESP: wifi_AP_init IP: %s SSID: %s HOSTNAME: %s\n", WiFi.softAPIP().toString().c_str(), WiFi.softAPSSID().c_str(), hostname );
+		ESP_DEBUG( "ESP: wifi_AP_init IP: %s SSID: %s HOSTNAME: %s\n", WiFi.softAPIP().toString().c_str(), WiFi.softAPSSID().c_str(), esp::hostName );
 
 		return res;
 	}
 
 	//-------------------------------------------------------------------------------
-	bool wifi_STA_init(const char* hostname)
+	bool wifi_STA_init()
 	{
 		ESP_DEBUG( "ESP: STA MODE INIT...\n" );
 
@@ -255,16 +157,8 @@ namespace esp {
 		WiFi.setAutoReconnect( true );
 		WiFi.setAutoConnect( false );
 		WiFi.persistent( false );
-
-		if( esp::readConfig( ssid, skey ) ){
-			ESP_DEBUG( "ESP: Connect to %s\n", ssid );
-			WiFi.begin( ssid, skey );
-		}else{
-			ESP_DEBUG( "ESP: Can not read STA config file\n" );
-			return false;
-		}
-
-		WiFi.hostname( hostname );
+		WiFi.begin( esp::app.sta_ssid, esp::app.sta_key );
+		WiFi.hostname( esp::hostName );
 
 		ESP_DEBUG( "ESP: WiFi connecting...\n" );
 		uint8_t i = 0;
@@ -306,7 +200,9 @@ namespace esp {
 		if( wifiConfig ){
 			webServer->on( "/wifi", [ webServer ](void){
 				ESP_DEBUG( "WEB GET /wifi\n" );
-				esp::handleWebConfigPage( webServer );
+				if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
+					esp::handleWebConfigPage( webServer );
+				}
 			} );
 		}
 		if( notFound ){
@@ -322,7 +218,6 @@ namespace esp {
 				webServer->send ( 200, "text/html", "pageBuff is nullptr" );
 				return;
 			}
-
 
 			strcpy( esp::pageBuff, "{ \"cpu_freq\": " );
 			utoa( ESP.getCpuFreqMHz(), esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
@@ -354,7 +249,7 @@ namespace esp {
 #endif
 			}
 
-			strcat( esp::pageBuff, ",\"mode\": " ); utoa( esp::mode, esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
+			strcat( esp::pageBuff, ",\"mode\": " ); utoa( esp::app.mode, esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
 			strcat( esp::pageBuff, ",\"version\": [" );
 			itoa( esp::firstVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
 			strcat( esp::pageBuff, "," );itoa( esp::secondVersion, esp::tmpVal, 10 );strcat( esp::pageBuff, esp::tmpVal );
@@ -456,41 +351,32 @@ namespace esp {
 #endif
 	{
 		//-------------------------------------------------------------
-		if( webServer->hasArg( "sta_config" ) && webServer->hasArg( "ssid" ) && webServer->hasArg( "key" ) ){
-			uint8_t sta_config = webServer->arg( "sta_config" ).toInt();
-			if( sta_config == 1 ){
+		if( webServer->hasArg( "cmd" ) && webServer->hasArg( "ssid" ) && webServer->hasArg( "key" ) ){
+			const String &cmd = webServer->arg( "cmd" );
+			if( cmd == "ap_config" ){
 				if( webServer->arg( "ssid" ).length() > 0 ){
-					if( webServer->hasArg( "format" ) ){
-						if( webServer->arg( "format" ) == "on" ){
-							ESP_DEBUG( "Format Filesystem...\n" );
+					strcpy( esp::app.ap_ssid, webServer->arg( "ssid" ).c_str() );
+					strcpy( esp::app.ap_key, webServer->arg( "key" ).c_str() );
+					esp::saveSystemSettings();
+				}
+			}else if( cmd == "sta_config" ){
+				if( webServer->arg( "ssid" ).length() > 0 ){
+					strcpy( esp::app.sta_ssid, webServer->arg( "ssid" ).c_str() );
+					strcpy( esp::app.sta_key, webServer->arg( "key" ).c_str() );
+					esp::saveSystemSettings();
+				}
+			}else if( cmd == "remove_config" && esp::flags.useFS && webServer->hasArg( "reboot" ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
-							LittleFS.format();
+				LittleFS.remove( ESP_SYSTEM_CONFIG_FILE );
 #elif defined(ARDUINO_ARCH_ESP32)
-							SPIFFS.format();
+				SPIFFS.remove( ESP_SYSTEM_CONFIG_FILE );
 #endif
-						}
-					}
-					if( !esp::saveConfig( webServer->arg( "ssid" ).c_str(), webServer->arg( "key" ).c_str() ) ){
-						webServer->client().write( "ERROR" );
-						webServer->client().stop();
-					}else{
-						webServer->send ( 200, "text/html", "OK" );
-						esp::flags.captivePortalAccess = 1;
-						ESP.restart();
-					}
+				if( webServer->arg( "reboot" ) == "on" ){
+					webServer->send ( 200, "text/html", "Rebooting..." );
+					delay( 1000 );
+					ESP.restart();
 					return;
 				}
-			}else if( sta_config == 2 && esp::flags.useFS ){
-#if defined(ARDUINO_ARCH_ESP8266)
-				LittleFS.remove( ESP_STA_CONFIG_FILE );
-				LittleFS.remove( ESP_AP_CONFIG_FILE );
-#elif defined(ARDUINO_ARCH_ESP32)
-				SPIFFS.remove( ESP_STA_CONFIG_FILE );
-				SPIFFS.remove( ESP_AP_CONFIG_FILE );
-#endif
-				webServer->send ( 200, "text/html", "Rebooting..." );
-				delay( 1000 );
-				ESP.restart();
 			}
 
 			webServer->send ( 200, "text/html", "OK" );
@@ -508,42 +394,78 @@ namespace esp {
 		strcat( pageBuff, "<title>Wi-Fi Settings</title>" );
 		if( pageEndTop != nullptr ) strcat( pageBuff, pageEndTop );
 
+		strcat( pageBuff, "<div class='header'>AP Settings</div>" );
+		strcat( pageBuff, "<div class='block'>" );
 
+			strcat( pageBuff, "<form action='/wifi' method='post'>" );
+				strcat( pageBuff, "<input type='hidden' name='cmd' value='ap_config'>" );
+				strcat( pageBuff, "<div class='string'><b>SSID:</b>" );
+					strcat( pageBuff, "<input type=\"text\" name=\"ssid\" value=\"" );
+					strcat( pageBuff, esp::app.ap_ssid );
+					strcat( pageBuff, "\">" );
+				strcat( pageBuff, "</div>" );
+				strcat( pageBuff, "<div class='string'><b>KEY:</b>" );
+					strcat( pageBuff, "<input type=\"text\" name=\"key\" value=\"" );
+					strcat( pageBuff, esp::app.ap_key );
+					strcat( pageBuff, "\">" );
+				strcat( pageBuff, "</div>" );
+				strcat( pageBuff, "<input type='submit' value='Save'>" );
+		strcat( pageBuff, "</div>" );
 
-		strcat( pageBuff, "<form action='/wifi' method='post'>" );
-			strcat( pageBuff, "<input type='hidden' name='sta_config' value='1'>" );
-			strcat( pageBuff, "<table style=\"width: 300px; margin: auto;\">" );
-				strcat( pageBuff, "<tr>" );
-					strcat( pageBuff, "<td>SSID:</td>" );
-					strcat( pageBuff, "<td>" );
-						strcat( pageBuff, "<input type=\"text\" name=\"ssid\" list=\"networks\">" );
-						strcat( pageBuff, "<datalist  id=\"networks\">" );
-							for( uint8_t i = 0; i < esp::countNetworks; i++ ){
-								strcat( pageBuff, "<option value=\"" );
-								strcat( pageBuff, WiFi.SSID( i ).c_str() );
-								strcat( pageBuff, "\"/>" );
-							}
-						strcat( pageBuff, "</datalist>" );
-					strcat( pageBuff, "</td>" );
-				strcat( pageBuff, "</tr>" );
-				strcat( pageBuff, "<tr>" );
-					strcat( pageBuff, "<td>KEY:</td>" );
-					strcat( pageBuff, "<td>" );
-						strcat( pageBuff, "<input type='text' name='key'>" );
-					strcat( pageBuff, "</td>" );
-				strcat( pageBuff, "</tr>" );
-				strcat( pageBuff, "<tr>" );
-					strcat( pageBuff, "<td>FORMAT FS:</td>" );
-					strcat( pageBuff, "<td>" );
-						strcat( pageBuff, "<input type='checkbox' name='format'>" );
-					strcat( pageBuff, "</td>" );
-				strcat( pageBuff, "</tr>" );
-				strcat( pageBuff, "<tr>" );
-					strcat( pageBuff, "<td align='center'><input type='submit' value='Save & Connect'></td>" );
-					strcat( pageBuff, "<td align='center'><input type='button' value='Remove WiFi settings' onClick=\"this.form.sta_config.value=2;this.form.submit();\"></td>" );
-				strcat( pageBuff, "</tr>" );
-			strcat( pageBuff, "</table>" );
-		strcat( pageBuff, "</form>" );
+		strcat( pageBuff, "<div class='header'>STA Settings</div>" );
+		strcat( pageBuff, "<div class='block'>" );
+			strcat( pageBuff, "<form action='/wifi' method='post'>" );
+				strcat( pageBuff, "<input type='hidden' name='cmd' value='sta_config'>" );
+				strcat( pageBuff, "<div class='string'><b>SSID:</b>" );
+					strcat( pageBuff, "<input type=\"text\" name=\"ssid\" list=\"networks\" value=\"" );
+					strcat( pageBuff, esp::app.sta_ssid );
+					strcat( pageBuff, "\">" );
+					strcat( pageBuff, "<datalist  id=\"networks\">" );
+						for( uint8_t i = 0; i < esp::countNetworks; i++ ){
+							strcat( pageBuff, "<option value=\"" );
+							strcat( pageBuff, WiFi.SSID( i ).c_str() );
+							strcat( pageBuff, "\"/>" );
+						}
+					strcat( pageBuff, "</datalist>" );
+				strcat( pageBuff, "</div>" );
+				strcat( pageBuff, "<div class='string'><b>KEY:</b>" );
+					strcat( pageBuff, "<input type=\"text\" name=\"key\" value=\"" );
+					strcat( pageBuff, esp::app.sta_key );
+					strcat( pageBuff, "\">" );
+				strcat( pageBuff, "</div>" );
+				strcat( pageBuff, "<input type='submit' value='Save'>" );
+			strcat( pageBuff, "</form>" );
+		strcat( pageBuff, "</div>" );
+
+		strcat( pageBuff, "<div class='header'>Other Settings</div>" );
+		strcat( pageBuff, "<div class='block'>" );
+			strcat( pageBuff, "<form action='/wifi' method='post'>" );
+				strcat( pageBuff, "<input type='hidden' name='cmd' value='other'>" );
+				strcat( pageBuff, "<div class='string'><text>Mode</text>" );
+					strcat( pageBuff, "<select name='mode' value=\"" );
+					utoa( esp::app.mode, esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
+					strcat( pageBuff, "\">" );
+						//NOTE: Wifi mode options
+						strcat( pageBuff, "<option value='0' label='UNKNOWN'>" );
+						strcat( pageBuff, "<option value='1' label='STA'>" );
+						strcat( pageBuff, "<option value='2' label='AP'>" );
+						strcat( pageBuff, "<option value='3' label='NO_WIFI'>" );
+					strcat( pageBuff, "</select>" );
+				strcat( pageBuff, "</div>" );
+				strcat( pageBuff, "<input type='submit' value='Save'>" );
+			strcat( pageBuff, "</form>" );
+		strcat( pageBuff, "</div>" );
+
+		strcat( pageBuff, "<div class='header'>Remove SYSTEM Settings</div>" );
+		strcat( pageBuff, "<div class='block'>" );
+			strcat( pageBuff, "<form action='/wifi' method='post' onSubmit=\"return confirm( 'Are you sure?' );\">" );
+				strcat( pageBuff, "<input type='hidden' name='cmd' value='remove_config'>" );
+				strcat( pageBuff, "<div class='string'><text>Reboot after</text>" );
+					strcat( pageBuff, "<input type=\"checkbox\" name=\"reboot\">" );
+				strcat( pageBuff, "</div>" );
+				strcat( pageBuff, "<input type='submit' value='REMOVE System configuration'>" );
+			strcat( pageBuff, "</form>" );
+		strcat( pageBuff, "</div>" );
 
 		
 
@@ -775,7 +697,7 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	void init(bool useFS)
+	void init(const char* deviceName, bool useFS)
 	{
 		esp::flags.useFS							= 0;
 
@@ -794,6 +716,7 @@ namespace esp {
 		esp::flags.captivePortal					= 0;
 		esp::flags.captivePortalAccess				= 0;
 		esp::flags.autoUpdate						= 0;
+		esp::app.mode								= esp::Mode::UNKNOWN;
 
 		if( esp::isFileExists( ESP_AUTOUPDATE_FILENAME ) ) esp::flags.autoUpdate = 1;
 
@@ -803,8 +726,18 @@ namespace esp {
 
 		strcpy( esp::systemLogin, SYSTEM_LOGIN );
 		strcpy( esp::systemPassword, SYSTEM_PASSWORD );
+		strcpy( esp::app.ap_ssid, deviceName );
+		strcpy( esp::app.ap_key, DEFAULT_AP_KEY );
+		strcpy( esp::hostName, deviceName );
 
-		updateMode();
+		if( !esp::flags.useFS ) return;
+
+		ESP_DEBUG( "ESP: load System Settings..." );
+		if( loadSettings( (uint8_t*)&app, sizeof( app ), ESP_SYSTEM_CONFIG_FILE ) ){
+			ESP_DEBUG( "OK\n" );
+		}else{
+			ESP_DEBUG( "ERROR\n" );
+		}
 	}
 
 	//-------------------------------------------------------------------------------
@@ -1071,25 +1004,26 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	void updateMode(void)
-	{
-		esp::mode = esp::Mode::UNKNOWN;
-
-		if( esp::isFileExists( ESP_AP_CONFIG_FILE ) ) esp::mode = esp::Mode::AP;
-		if( esp::isFileExists( ESP_STA_CONFIG_FILE ) ) esp::mode = esp::Mode::STA;
-	}
-
-	//-------------------------------------------------------------------------------
 	uint8_t getMode(void)
 	{
-		return esp::mode;
+		return esp::app.mode;
 	}
 
 	//-------------------------------------------------------------------------------
 	void setMode(const uint8_t value)
 	{
 		if( value > esp::Mode::NO_WIFI ) return;
-		esp::mode = value;
+		esp::app.mode = value;
+		saveSystemSettings();
+	}
+
+	//-------------------------------------------------------------------------------
+	void saveSystemSettings(void)
+	{
+		if( !esp::flags.useFS ) return;
+
+		ESP_DEBUG( "ESP: saveSystemSettings...\n" );
+		saveSettings( (uint8_t*)&app, sizeof( app ), ESP_SYSTEM_CONFIG_FILE );
 	}
 
 	//-------------------------------------------------------------------------------

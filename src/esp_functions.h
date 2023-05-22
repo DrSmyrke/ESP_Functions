@@ -3,8 +3,6 @@
 
 
 //-------------------------------------------------------------------------------
-#define ESP_STA_CONFIG_FILE						"/staConfig"
-#define ESP_AP_CONFIG_FILE						"/apConfig"
 #define ESP_CONFIG_SSID_MAX_LEN					32
 #define ESP_CONFIG_KEY_MAX_LEN					32
 #define ESP_FIRMWARE_FILENAME					"firmware.bin"
@@ -12,6 +10,7 @@
 #define ESP_AUTOUPDATE_FILENAME					"/autoupdate"
 #define ESP_FIRMWARE_VERSION_FILENAME			"/version"
 #define USER_SETTINGS_FILE						"/settings.dat"
+#define ESP_SYSTEM_CONFIG_FILE					"/config.dat"
 #define SYSTEM_LOGIN							"admin"
 #define SYSTEM_PASSWORD							"admin"
 #define ESP_AUTH_REALM							"Dr.Smyrke TECH"
@@ -20,6 +19,9 @@
 #endif
 #ifndef DEFAULT_AP_KEY
 	#define DEFAULT_AP_KEY						"1234567890"
+#endif
+#ifndef DEFAULT_DEVICE_NAME
+	#define DEFAULT_DEVICE_NAME					"ESP_DEVICE"
 #endif
 #ifndef UPDATE_SIZE_UNKNOWN
 	#define UPDATE_SIZE_UNKNOWN					0xFFFFFFFF
@@ -46,6 +48,7 @@
 //-------------------------------------------------------------------------------
 namespace esp {
 	struct Mode{
+		//NOTE: If you change this enum, you must be change options in wifi page! Find ": Wifi mode options" in .cpp file
 		enum{
 			UNKNOWN,
 			STA,
@@ -62,6 +65,13 @@ namespace esp {
 		unsigned char updateFirmware: 1;
 		unsigned char updateFile: 1;
 	} Flags;
+	typedef struct {
+		uint8_t mode;
+		char ap_ssid[ ESP_CONFIG_SSID_MAX_LEN ];
+		char ap_key[ ESP_CONFIG_KEY_MAX_LEN ];
+		char sta_ssid[ ESP_CONFIG_SSID_MAX_LEN ];
+		char sta_key[ ESP_CONFIG_KEY_MAX_LEN ];
+	} Data;
 	extern Flags flags;
 	extern int8_t countNetworks;
 	extern const char* pageTop;
@@ -73,20 +83,6 @@ namespace esp {
 	extern uint8_t secondVersion;
 	extern uint16_t thridVersion;
 	
-	/**
-	 * read ssid and key from spi fs
-	 * @param {char*} ssid
-	 * @param {char*} key
-	 * @return {uint8_t} result ( 1 - success, 0 - error )
-	 */
-	uint8_t readConfig(char *ssid, char *key);
-	/**
-	 * save ssid and key from spi fs
-	 * @param {char*} ssid
-	 * @param {char*} key
-	 * @return {uint8_t} result ( 1 - success, 0 - error )
-	 */
-	uint8_t saveConfig(const char *ssid, const char *key);
 	/**
 	 * checking acces from web
 	 * @param {WebServer*} user
@@ -128,28 +124,25 @@ namespace esp {
 	uint32_t getMyID(void);
 	/**
 	 * initialize wifi subsystem AP or STA
-	 * @param {char*} hostname
 	 * @param {IPAddress} ip
 	 * @param {IPAddress} gateway
 	 * @param {IPAddress} mask
 	 * @return {bool} true if correct
 	 */
-	bool wifi_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask);
+	bool wifi_init(const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask);
 	/**
 	 * initialize wifi AP
-	 * @param {char*} hostname
 	 * @param {IPAddress} ip
 	 * @param {IPAddress} gateway
 	 * @param {IPAddress} mask
 	 * @return {bool} true if correct
 	 */
-	bool wifi_AP_init(const char* hostname, const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask);
+	bool wifi_AP_init(const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask);
 	/**
 	 * initialize wifi STA
-	 * @param {char*} hostname
 	 * @return {bool} true if correct
 	 */
-	bool wifi_STA_init(const char* hostname);
+	bool wifi_STA_init(void);
 	/**
 	 * checking acces from web
 	 * @param {WebServer*} pointer
@@ -259,10 +252,11 @@ namespace esp {
 	void printAllFiles(HardwareSerial &SerialPort);
 	/**
 	 * Initialize for library methods
+	 * @param {char*} name - Device Name
 	 * @param {boolean} useFS (default: true)
 	 * @return {none}
 	 */
-	void init(bool useFS = true);
+	void init(const char* deviceName = DEFAULT_DEVICE_NAME, bool useFS = true);
 	/**
 	 * Change MAC (!!! use after Connection initialize)
 	 * @return {none}
@@ -326,11 +320,6 @@ namespace esp {
 	 */
 	void setVersion(const uint8_t first = 0, const uint8_t second = 1, const uint16_t thrid = 0);
 	/**
-	 * Update mode value (internal method !!!)
-	 * @return {none}
-	 */
-	void updateMode(void);
-	/**
 	 * Get mode value
 	 * @return {uint8_t} esp::Mode enum
 	 */
@@ -341,6 +330,11 @@ namespace esp {
 	 * @return {none}
 	 */
 	void setMode(const uint8_t value);
+	/**
+	 * Save system settings (internal method don`t use this method!!!)
+	 * @return {none}
+	 */
+	void saveSystemSettings(void);
 }
 
 //-------------------------------------------------------------------------------
