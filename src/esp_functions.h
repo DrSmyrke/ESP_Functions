@@ -7,6 +7,7 @@
 #define ESP_CONFIG_KEY_MAX_LEN					32
 #define ESP_FIRMWARE_FILENAME					"firmware.bin"
 #define ESP_FIRMWARE_FILEPATH					"/firmware.bin"
+#define ESP_CAPTIVE_PORTAL_URL					"/portal"
 #define ESP_AUTOUPDATE_FILENAME					"/autoupdate"
 #define ESP_FIRMWARE_VERSION_FILENAME			"/version"
 #define USER_SETTINGS_FILE						"/settings.dat"
@@ -179,13 +180,14 @@ namespace esp {
 	/**
 	 * Activate web server Captive Portal logic
 	 * @param {WebServer*} pointer
+	 * @param {char*} url redirect to Captive portal page (default: nullptr)
 	 * @param {HandlerFunction} hanler function to Captive portal page (default: nullptr)
 	 * @return none
 	 */
 #if defined(ARDUINO_ARCH_ESP8266)
-	void activateCaptivePortal(ESP8266WebServer *webServer, const char* captiveRedirectTarget = "/", ESP8266WebServer::THandlerFunction cp_handler = nullptr);
+	void activateCaptivePortal(ESP8266WebServer *webServer, const char* captiveRedirectTarget = ESP_CAPTIVE_PORTAL_URL, ESP8266WebServer::THandlerFunction cp_handler = nullptr);
 #elif defined(ARDUINO_ARCH_ESP32)
-	void activateCaptivePortal(WebServer *webServer, const char* captiveRedirectTarget = "/", WebServer::THandlerFunction cp_handler = nullptr);
+	void activateCaptivePortal(WebServer *webServer, const char* captiveRedirectTarget = ESP_CAPTIVE_PORTAL_URL, WebServer::THandlerFunction cp_handler = nullptr);
 #endif
 	/**
 	 * web config page
@@ -262,15 +264,6 @@ namespace esp {
 	 * @return {none}
 	 */
 	void changeMAC(const uint8_t *mac);
-	/**
-	 * Captive portal page
-	 * @return {none}
-	 */
-#if defined(ARDUINO_ARCH_ESP8266)
-	void captivePortalPage(ESP8266WebServer *webServer, ESP8266WebServer::THandlerFunction cp_handler = nullptr);
-#elif defined(ARDUINO_ARCH_ESP32)
-	void captivePortalPage(WebServer *webServer, WebServer::THandlerFunction cp_handler = nullptr);
-#endif
 	/**
 	 * HTTP Put request
 	 * @param {String &} URL

@@ -118,6 +118,7 @@ namespace esp {
 		}else if( esp::app.mode == esp::Mode::AP ){
 			return wifi_AP_init(ip, gateway, mask );
 		}
+		return false;
 	}
 
 	//-------------------------------------------------------------------------------
@@ -199,7 +200,7 @@ namespace esp {
 	{
 		if( wifiConfig ){
 			webServer->on( "/wifi", [ webServer ](void){
-				ESP_DEBUG( "WEB GET /wifi\n" );
+				ESP_DEBUG( "ESP: WEB /wifi\n" );
 				if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
 					esp::handleWebConfigPage( webServer );
 				}
@@ -319,26 +320,39 @@ namespace esp {
 #if defined(ARDUINO_ARCH_ESP8266)
 	void activateCaptivePortal(ESP8266WebServer *webServer, const char* captiveRedirectTarget, ESP8266WebServer::THandlerFunction cp_handler)
 #elif defined(ARDUINO_ARCH_ESP32)
-	void activateCaptivePortal(WebServer *webServer, const char* captiveRedirectTarget, WebServer::THandlerFunction cp_handler)
+	void activateCaptivePortal(WebServer *webServer,  const char* captiveRedirectTarget, WebServer::THandlerFunction cp_handler)
 #endif
 	{
-		webServer->on( "/fwlink", [ webServer, cp_handler ](void){
-			captivePortalPage( webServer, cp_handler );
+		String target = WiFi.softAPSSID() + ".lan";
+		if( captiveRedirectTarget != nullptr ){
+			target += captiveRedirectTarget;
+		}
+		target.toLowerCase();
+
+		// webServer->on( "/fwlink", [ webServer, target, cp_handler ](void){
+		// 	if( target != "" ){
+		// 		esp::setWebRedirect( webServer, target );
+		// 	}else if( cp_handler != nullptr ){
+		// 		cp_handler();
+		// 	}else{
+		// 		esp::webSendFile( webServer, "/portal.html", "text/html", ( !esp::flags.captivePortalAccess ) ? 200 : 204 );
+		// 	}
+		// } );
+		// webServer->on( "/generate_204", [ webServer, target, cp_handler ](void){
+		// 	if( target != "" ){
+		// 		esp::setWebRedirect( webServer, target );
+		// 	}else if( cp_handler != nullptr ){
+		// 		cp_handler();
+		// 	}else{
+		// 		esp::webSendFile( webServer, "/portal.html", "text/html", ( !esp::flags.captivePortalAccess ) ? 200 : 204 );
+		// 	}
+		// } );
+		
+		webServer->on( ESP_CAPTIVE_PORTAL_URL, [ webServer, target, cp_handler ](void){
+			esp::webSendFile( webServer, "/portal.html", "text/html", ( !esp::flags.captivePortalAccess ) ? 200 : 204 );
 		} );
-		webServer->on( "/generate_204", [ webServer, cp_handler ](void){
-			captivePortalPage( webServer, cp_handler );
-		} );
-		webServer->on( "/favicon.ico", [ webServer, cp_handler ](void){
-			captivePortalPage( webServer, cp_handler );
-		} );
-		webServer->onNotFound( [ webServer, captiveRedirectTarget ](void){
-			if( !esp::flags.captivePortalAccess ){
-				String target = WiFi.softAPSSID() + ".lan" + captiveRedirectTarget;
-				target.toLowerCase();
-				esp::setWebRedirect( webServer, target );
-				return;
-			}
-			esp::handleWeb404Page( webServer );
+		webServer->onNotFound( [ webServer, target, cp_handler ](void){
+			esp::setWebRedirect( webServer, target );
 		} );
 		esp::flags.captivePortal = 1;
 	}
@@ -350,20 +364,33 @@ namespace esp {
 	void handleWebConfigPage(WebServer *webServer)
 #endif
 	{
+		bool success = false;
+
+		esp::setNoCacheContent( webServer );
 		//-------------------------------------------------------------
-		if( webServer->hasArg( "cmd" ) && webServer->hasArg( "ssid" ) && webServer->hasArg( "key" ) ){
+		if( webServer->hasArg( "cmd" ) ){
 			const String &cmd = webServer->arg( "cmd" );
-			if( cmd == "ap_config" ){
+			if( cmd == "ap_config" && webServer->hasArg( "ssid" ) && webServer->hasArg( "key" ) ){
 				if( webServer->arg( "ssid" ).length() > 0 ){
 					strcpy( esp::app.ap_ssid, webServer->arg( "ssid" ).c_str() );
 					strcpy( esp::app.ap_key, webServer->arg( "key" ).c_str() );
 					esp::saveSystemSettings();
+					success = true;
 				}
-			}else if( cmd == "sta_config" ){
+			}else if( cmd == "sta_config" && webServer->hasArg( "ssid" ) && webServer->hasArg( "key" ) ){
 				if( webServer->arg( "ssid" ).length() > 0 ){
 					strcpy( esp::app.sta_ssid, webServer->arg( "ssid" ).c_str() );
 					strcpy( esp::app.sta_key, webServer->arg( "key" ).c_str() );
 					esp::saveSystemSettings();
+					success = true;
+				}
+			}else if( cmd == "other" ){
+				ESP_DEBUG( "OTHER\n" );
+				if( webServer->hasArg( "mode" ) ){
+					esp::app.mode = (uint8_t)webServer->arg( "mode" ).toInt();
+					ESP_DEBUG( "NEW MODE: %u\n", esp::app.mode );
+					esp::saveSystemSettings();
+					success = true;
 				}
 			}else if( cmd == "remove_config" && esp::flags.useFS && webServer->hasArg( "reboot" ) ){
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -372,106 +399,30 @@ namespace esp {
 				SPIFFS.remove( ESP_SYSTEM_CONFIG_FILE );
 #endif
 				if( webServer->arg( "reboot" ) == "on" ){
-					webServer->send ( 200, "text/html", "Rebooting..." );
+					// webServer->send ( 200, "text/html", "Rebooting..." );
+					webServer->send ( 200, "application/json", "{\"success\":\"true\",\"message\":\"Rebooting...\"}" );
 					delay( 1000 );
 					ESP.restart();
 					return;
 				}
 			}
-
-			webServer->send ( 200, "text/html", "OK" );
 		}
 		//-------------------------------------------------------------
-		esp::setNoCacheContent( webServer );
-
 		if( pageBuff == nullptr ){
-			webServer->send ( 200, "text/html", "pageBuff is nullptr" );
+			// webServer->send ( 200, "text/html", "pageBuff is nullptr" );
+			if( success ){
+				webServer->send( 200, "application/json", "{\"success\":\"true\",\"message\":\"pageBuff is nullptr\"}" );
+			}else{
+				webServer->send( 200, "application/json", "{\"success\":\"false\",\"message\":\"pageBuff is nullptr\"}" );
+			}
 			return;
 		}
 
-		pageBuff[ 0 ] = '\0';
-		if( pageTop != nullptr ) strcpy( pageBuff, pageTop );
-		strcat( pageBuff, "<title>Wi-Fi Settings</title>" );
-		if( pageEndTop != nullptr ) strcat( pageBuff, pageEndTop );
+		strcpy( pageBuff, "{\"success\": " );
+		strcat( pageBuff, ( success ) ? "\"true\"" : "\"false\"" );
+		strcat( pageBuff, "}" );
 
-		strcat( pageBuff, "<div class='header'>AP Settings</div>" );
-		strcat( pageBuff, "<div class='block'>" );
-
-			strcat( pageBuff, "<form action='/wifi' method='post'>" );
-				strcat( pageBuff, "<input type='hidden' name='cmd' value='ap_config'>" );
-				strcat( pageBuff, "<div class='string'><b>SSID:</b>" );
-					strcat( pageBuff, "<input type=\"text\" name=\"ssid\" value=\"" );
-					strcat( pageBuff, esp::app.ap_ssid );
-					strcat( pageBuff, "\">" );
-				strcat( pageBuff, "</div>" );
-				strcat( pageBuff, "<div class='string'><b>KEY:</b>" );
-					strcat( pageBuff, "<input type=\"text\" name=\"key\" value=\"" );
-					strcat( pageBuff, esp::app.ap_key );
-					strcat( pageBuff, "\">" );
-				strcat( pageBuff, "</div>" );
-				strcat( pageBuff, "<input type='submit' value='Save'>" );
-		strcat( pageBuff, "</div>" );
-
-		strcat( pageBuff, "<div class='header'>STA Settings</div>" );
-		strcat( pageBuff, "<div class='block'>" );
-			strcat( pageBuff, "<form action='/wifi' method='post'>" );
-				strcat( pageBuff, "<input type='hidden' name='cmd' value='sta_config'>" );
-				strcat( pageBuff, "<div class='string'><b>SSID:</b>" );
-					strcat( pageBuff, "<input type=\"text\" name=\"ssid\" list=\"networks\" value=\"" );
-					strcat( pageBuff, esp::app.sta_ssid );
-					strcat( pageBuff, "\">" );
-					strcat( pageBuff, "<datalist  id=\"networks\">" );
-						for( uint8_t i = 0; i < esp::countNetworks; i++ ){
-							strcat( pageBuff, "<option value=\"" );
-							strcat( pageBuff, WiFi.SSID( i ).c_str() );
-							strcat( pageBuff, "\"/>" );
-						}
-					strcat( pageBuff, "</datalist>" );
-				strcat( pageBuff, "</div>" );
-				strcat( pageBuff, "<div class='string'><b>KEY:</b>" );
-					strcat( pageBuff, "<input type=\"text\" name=\"key\" value=\"" );
-					strcat( pageBuff, esp::app.sta_key );
-					strcat( pageBuff, "\">" );
-				strcat( pageBuff, "</div>" );
-				strcat( pageBuff, "<input type='submit' value='Save'>" );
-			strcat( pageBuff, "</form>" );
-		strcat( pageBuff, "</div>" );
-
-		strcat( pageBuff, "<div class='header'>Other Settings</div>" );
-		strcat( pageBuff, "<div class='block'>" );
-			strcat( pageBuff, "<form action='/wifi' method='post'>" );
-				strcat( pageBuff, "<input type='hidden' name='cmd' value='other'>" );
-				strcat( pageBuff, "<div class='string'><text>Mode</text>" );
-					strcat( pageBuff, "<select name='mode' value=\"" );
-					utoa( esp::app.mode, esp::tmpVal, 10 ); strcat( esp::pageBuff, esp::tmpVal );
-					strcat( pageBuff, "\">" );
-						//NOTE: Wifi mode options
-						strcat( pageBuff, "<option value='0' label='UNKNOWN'>" );
-						strcat( pageBuff, "<option value='1' label='STA'>" );
-						strcat( pageBuff, "<option value='2' label='AP'>" );
-						strcat( pageBuff, "<option value='3' label='NO_WIFI'>" );
-					strcat( pageBuff, "</select>" );
-				strcat( pageBuff, "</div>" );
-				strcat( pageBuff, "<input type='submit' value='Save'>" );
-			strcat( pageBuff, "</form>" );
-		strcat( pageBuff, "</div>" );
-
-		strcat( pageBuff, "<div class='header'>Remove SYSTEM Settings</div>" );
-		strcat( pageBuff, "<div class='block'>" );
-			strcat( pageBuff, "<form action='/wifi' method='post' onSubmit=\"return confirm( 'Are you sure?' );\">" );
-				strcat( pageBuff, "<input type='hidden' name='cmd' value='remove_config'>" );
-				strcat( pageBuff, "<div class='string'><text>Reboot after</text>" );
-					strcat( pageBuff, "<input type=\"checkbox\" name=\"reboot\">" );
-				strcat( pageBuff, "</div>" );
-				strcat( pageBuff, "<input type='submit' value='REMOVE System configuration'>" );
-			strcat( pageBuff, "</form>" );
-		strcat( pageBuff, "</div>" );
-
-		
-
-		if( pageBottom != nullptr ) strcat( pageBuff, pageBottom );
-
-		webServer->send ( 200, "text/html", pageBuff );
+		webServer->send ( 200, "application/json", pageBuff );
 	}
 
 	//-------------------------------------------------------------------------------
@@ -730,56 +681,44 @@ namespace esp {
 		strcpy( esp::app.ap_key, DEFAULT_AP_KEY );
 		strcpy( esp::hostName, deviceName );
 
-		if( !esp::flags.useFS ) return;
-
-		ESP_DEBUG( "ESP: load System Settings..." );
-		if( loadSettings( (uint8_t*)&app, sizeof( app ), ESP_SYSTEM_CONFIG_FILE ) ){
-			ESP_DEBUG( "OK\n" );
-		}else{
-			ESP_DEBUG( "ERROR\n" );
+		if( esp::flags.useFS ){
+			ESP_DEBUG( "ESP: load System Settings..." );
+			if( loadSettings( (uint8_t*)&app, sizeof( app ), ESP_SYSTEM_CONFIG_FILE ) ){
+				ESP_DEBUG( "OK\n" );
+			}else{
+				ESP_DEBUG( "ERROR\n" );
+			}
 		}
+
+		ESP_DEBUG( "ESP: Device mode:%u\n", esp::app.mode );
+
+#ifdef __DEV
+		ESP_DEBUG( "ESP: === filesystem ============\n" );
+#if defined(ARDUINO_ARCH_ESP8266)
+		File root = LittleFS.open( "/" );
+#elif defined(ARDUINO_ARCH_ESP32)
+		File root = SPIFFS.open( "/" );
+#endif
+		File file = root.openNextFile();
+		while( file ){
+			ESP_DEBUG( "FILE: %s\n", file.name() );
+			file = root.openNextFile();
+		}
+
+		ESP_DEBUG( "ESP: === end filesystem ========\n" );
+#endif
 	}
 
 	//-------------------------------------------------------------------------------
 	void changeMAC(const uint8_t *mac)
 	{
-		ESP_DEBUG( "OLD ESP MAC: %s\n", WiFi.macAddress().c_str() );
+		ESP_DEBUG( "ESP: OLD ESP MAC: %s\n", WiFi.macAddress().c_str() );
 #if defined(ARDUINO_ARCH_ESP8266)
 		wifi_set_macaddr( 0, const_cast<uint8*>(mac) );
 #elif defined(ARDUINO_ARCH_ESP32)
 		esp_wifi_set_mac( WIFI_IF_STA, mac );
 #endif
-		ESP_DEBUG( "NEW ESP MAC: %s\n", WiFi.macAddress().c_str() );
-	}
-
-	//-------------------------------------------------------------------------------
-#if defined(ARDUINO_ARCH_ESP8266)
-	void captivePortalPage(ESP8266WebServer *webServer, ESP8266WebServer::THandlerFunction cp_handler)
-#elif defined(ARDUINO_ARCH_ESP32)
-	void captivePortalPage(WebServer *webServer, WebServer::THandlerFunction cp_handler)
-#endif
-	{
-		//------------------------------------------------------------------------
-		if( webServer->hasArg( "getAccess" ) ) esp::flags.captivePortalAccess = 1;
-		//------------------------------------------------------------------------
-		if( pageBuff == nullptr ){
-			webServer->send ( ( !esp::flags.captivePortalAccess ) ? 200 : 204, "text/html", "pageBuff is nullptr" );
-			return;
-		}
-
-		if( esp::pageTop != nullptr ) strcpy( esp::pageBuff, esp::pageTop );
-		strcat( esp::pageBuff, "<title>Captive portal</title>" );
-		if( esp::pageEndTop != nullptr ) strcat( esp::pageBuff, esp::pageEndTop );
-		strcat( esp::pageBuff, "<h1>ESP Captive portal</h1>" );
-		strcat( esp::pageBuff, "<br>" );
-		strcat( esp::pageBuff, webServer->header( "Location" ).c_str() );
-		strcat( esp::pageBuff, "<br>" );
-		strcat( esp::pageBuff, webServer->uri().c_str() );
-		strcat( esp::pageBuff, "<br>" );
-		if( cp_handler != nullptr ) cp_handler();
-		if( esp::pageBottom != nullptr ) strcat( esp::pageBuff, esp::pageBottom );
-
-		webServer->send ( ( !esp::flags.captivePortalAccess ) ? 200 : 204, "text/html", esp::pageBuff );
+		ESP_DEBUG( "ESP: NEW ESP MAC: %s\n", WiFi.macAddress().c_str() );
 	}
 
 	//-------------------------------------------------------------------------------
