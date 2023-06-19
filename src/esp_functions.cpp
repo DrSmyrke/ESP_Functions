@@ -695,9 +695,9 @@ namespace esp {
 #ifdef __DEV
 		ESP_DEBUG( "ESP: === filesystem ============\n" );
 #if defined(ARDUINO_ARCH_ESP8266)
-		File root = LittleFS.open( "/" );
+		File root = LittleFS.open( "/", "r" );
 #elif defined(ARDUINO_ARCH_ESP32)
-		File root = SPIFFS.open( "/" );
+		File root = SPIFFS.open( "/", "r" );
 #endif
 		File file = root.openNextFile();
 		while( file ){
