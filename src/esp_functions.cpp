@@ -201,8 +201,8 @@ namespace esp {
 		if( wifiConfig ){
 			webServer->on( "/wifi", [ webServer ](void){
 				ESP_DEBUG( "ESP: WEB /wifi\n" );
-				//if workmode unknown disable auth
-				if( esp::app.mode == esp::Mode::UNKNOWN ){
+				//if activated captive portal
+				if( esp::flags.captivePortal ){
 					esp::handleWebConfigPage( webServer );
 				}else{
 					if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
@@ -426,6 +426,12 @@ namespace esp {
 		strcpy( pageBuff, "{\"success\": " );
 		strcat( pageBuff, ( success ) ? "\"true\"" : "\"false\"" );
 		strcat( pageBuff, "}" );
+
+		//if activated captive portal
+		if( esp::flags.captivePortal ){
+			esp::setWebRedirect( webServer, ESP_CAPTIVE_PORTAL_URL );
+			return;
+		}
 
 		webServer->send ( 200, "application/json", pageBuff );
 	}
