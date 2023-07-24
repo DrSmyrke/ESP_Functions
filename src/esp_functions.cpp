@@ -201,8 +201,13 @@ namespace esp {
 		if( wifiConfig ){
 			webServer->on( "/wifi", [ webServer ](void){
 				ESP_DEBUG( "ESP: WEB /wifi\n" );
-				if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
+				//if workmode unknown disable auth
+				if( esp::app.mode == esp::Mode::UNKNOWN ){
 					esp::handleWebConfigPage( webServer );
+				}else{
+					if( esp::checkWebAuth( webServer, esp::systemLogin, esp::systemPassword, ESP_AUTH_REALM, "access denied" ) ){
+						esp::handleWebConfigPage( webServer );
+					}
 				}
 			} );
 		}
@@ -659,7 +664,7 @@ namespace esp {
 #elif defined(ARDUINO_ARCH_ESP32)
 			fs_init_res = SPIFFS.begin( true );
 #endif
-			delay( 500 );
+			delay( 50 );
 			ESP_DEBUG( "FS Init...%s\n", ( ( fs_init_res ) ? "OK" : "ERROR" ) );
 			esp::flags.useFS						= ( fs_init_res ) ? 1 : 0;
 		}
