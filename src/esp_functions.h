@@ -328,6 +328,11 @@ namespace esp {
 	 * @return {none}
 	 */
 	void saveSystemSettings(void);
+	/**
+	 * Get reset reason
+	 * @return {uint32_t}
+	 */
+	uint32_t getResetReason(void);
 }
 
 //-------------------------------------------------------------------------------

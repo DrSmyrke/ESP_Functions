@@ -977,4 +977,12 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
+	uint32_t getResetReason(void)
+	{
+		rst_info *resetInfo;
+		resetInfo = ESP.getResetInfoPtr();
+		return resetInfo->reason;
+	}
+
+	//-------------------------------------------------------------------------------
 }
