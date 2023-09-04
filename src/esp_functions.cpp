@@ -354,10 +354,21 @@ namespace esp {
 		// } );
 		
 		webServer->on( ESP_CAPTIVE_PORTAL_URL, [ webServer, target, cp_handler ](void){
-			esp::webSendFile( webServer, "/portal.html", "text/html", ( !esp::flags.captivePortalAccess ) ? 200 : 204 );
+			if( webServer->hasArg( "cmd" ) ){
+				if( webServer->arg( "cmd" ) == "OK" ){
+					esp::flags.captivePortalAccess = 1;
+					// esp::setWebRedirect( webServer, WiFi.softAPIP().toString() + "/" );
+				}
+			}
+
+			esp::webSendFile( webServer, "/portal.html", "text/html" );
 		} );
 		webServer->onNotFound( [ webServer, target, cp_handler ](void){
-			esp::setWebRedirect( webServer, target );
+			if( esp::flags.captivePortalAccess ){
+				webServer->send( 200, "text/html", "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>" );
+			}else{
+				esp::setWebRedirect( webServer, target );
+			}
 		} );
 		esp::flags.captivePortal = 1;
 	}
