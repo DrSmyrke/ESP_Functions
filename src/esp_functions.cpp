@@ -11,6 +11,7 @@
 	#include <HTTPClient.h>
 	#include <Update.h>
 	#include <esp_wifi.h>
+	#include <rom/rtc.h>
 #endif
 
 //-------------------------------------------------------------------------------
@@ -990,9 +991,13 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	uint32_t getResetReason(void)
 	{
+#if defined(ARDUINO_ARCH_ESP8266)
 		rst_info *resetInfo;
 		resetInfo = ESP.getResetInfoPtr();
 		return resetInfo->reason;
+#elif defined(ARDUINO_ARCH_ESP32)
+		return rtc_get_reset_reason( 0 );
+#endif
 	}
 
 	//-------------------------------------------------------------------------------
