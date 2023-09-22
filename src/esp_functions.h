@@ -320,7 +320,7 @@ namespace esp {
 	/**
 	 * Set mode value
 	 * @param {const uint8_t} value must be lower at esp::Mode enum
-	 * @return {none}
+	 * @return none
 	 */
 	void setMode(const uint8_t value);
 	/**
@@ -333,6 +333,22 @@ namespace esp {
 	 * @return {uint32_t}
 	 */
 	uint32_t getResetReason(void);
+	/**
+	 * Enable Promisc mode method
+	 * @param {Callback function} (default: nullptr)
+	 * @return none
+	*/
+	void enablePromiscMode(wifi_promiscuous_cb_t func = nullptr);
+	/**
+	 * Disable Promisc mode method
+	 * @return none
+	*/
+	void disablePromiscMode(void);
+	/**
+	 * Callback to recieve RAW data
+	 * @return none
+	 */
+	void promisc_rx_cb(uint8_t *buf, uint16_t len);
 }
 
 //-------------------------------------------------------------------------------

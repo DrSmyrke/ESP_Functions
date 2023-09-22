@@ -730,6 +730,12 @@ namespace esp {
 
 		ESP_DEBUG( "ESP: === end filesystem ========\n" );
 #endif
+		// Checking reboot reason
+		if( esp::getResetReason() == REASON_EXT_SYS_RST ){
+			// Включаем режим приема сырых данных для возможной конфигурации по сырым данным
+			disablePromiscMode();
+			enablePromiscMode();
+		}
 	}
 
 	//-------------------------------------------------------------------------------
@@ -998,6 +1004,32 @@ namespace esp {
 #elif defined(ARDUINO_ARCH_ESP32)
 		return rtc_get_reset_reason( 0 );
 #endif
+	}
+
+	//-------------------------------------------------------------------------------
+	void enablePromiscMode(wifi_promiscuous_cb_t func)
+	{
+		if( func == nullptr ){
+			wifi_set_promiscuous_rx_cb( promisc_rx_cb );
+		}else{
+			wifi_set_promiscuous_rx_cb( func );
+		}
+
+		wifi_promiscuous_enable( true );
+	}
+
+	//-------------------------------------------------------------------------------
+	void disablePromiscMode(void)
+	{
+		wifi_promiscuous_enable( false );
+	}
+
+	//-------------------------------------------------------------------------------
+	void promisc_rx_cb(uint8_t *buf, uint16_t len)
+	{
+		ESP_DEBUG( "WIFI RCV: [%u bytes] [", len );
+		for( uint16_t i = 0; i < len; i++ ) ESP_DEBUG( "%02X ", buf[ i ] );
+		ESP_DEBUG( "]\n" );
 	}
 
 	//-------------------------------------------------------------------------------
