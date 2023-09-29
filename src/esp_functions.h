@@ -28,6 +28,8 @@
 	#define UPDATE_SIZE_UNKNOWN					0xFFFFFFFF
 #endif
 
+#define PROMISCUOUS_MODE_CHANNEL				7
+
 //-------------------------------------------------------------------------------
 #include <stdint.h>
 
@@ -55,6 +57,7 @@ namespace esp {
 			STA,
 			AP,
 			NO_WIFI,
+			PROMISCUOUS,
 		};
 	};
 	typedef struct {

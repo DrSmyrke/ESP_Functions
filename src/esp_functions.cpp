@@ -114,6 +114,7 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	bool wifi_init(const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
 	{
+		ESP_DEBUG( "ESP: WiFi init at mode %u\n", esp::app.mode );
 		if( esp::app.mode == esp::Mode::STA ){
 			return wifi_STA_init();
 		}else if( esp::app.mode == esp::Mode::AP ){
@@ -730,12 +731,18 @@ namespace esp {
 
 		ESP_DEBUG( "ESP: === end filesystem ========\n" );
 #endif
+
 		// Checking reboot reason
-		if( esp::getResetReason() == REASON_EXT_SYS_RST ){
-			// Включаем режим приема сырых данных для возможной конфигурации по сырым данным
-			disablePromiscMode();
-			enablePromiscMode();
+		if( esp::app.mode == esp::Mode::STA || esp::app.mode == esp::Mode::AP ){
+			if( esp::getResetReason() == REASON_EXT_SYS_RST ){
+				// Включаем режим приема сырых данных для возможной конфигурации по сырым данным
+				disablePromiscMode();
+				enablePromiscMode();
+				return;
+			}
 		}
+
+		if( esp::app.mode == esp::Mode::UNKNOWN ) esp::setMode( esp::Mode::AP );
 	}
 
 	//-------------------------------------------------------------------------------
@@ -980,7 +987,6 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	void setMode(const uint8_t value)
 	{
-		if( value > esp::Mode::NO_WIFI ) return;
 		esp::app.mode = value;
 		saveSystemSettings();
 	}
@@ -1009,6 +1015,12 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	void enablePromiscMode(wifi_promiscuous_cb_t func)
 	{
+		ESP_DEBUG( "ESP: Enabled Promiscous mode at %u chanel\n", PROMISCUOUS_MODE_CHANNEL );
+
+		wifi_set_opmode( STATION_MODE );
+		WiFi.disconnect();
+		wifi_set_channel( PROMISCUOUS_MODE_CHANNEL );
+		
 		if( func == nullptr ){
 			wifi_set_promiscuous_rx_cb( promisc_rx_cb );
 		}else{
@@ -1016,6 +1028,8 @@ namespace esp {
 		}
 
 		wifi_promiscuous_enable( true );
+
+		esp::app.mode == esp::Mode::PROMISCUOUS;
 	}
 
 	//-------------------------------------------------------------------------------
@@ -1027,9 +1041,13 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	void promisc_rx_cb(uint8_t *buf, uint16_t len)
 	{
+		static uint8_t counter = 0;
+
 		ESP_DEBUG( "WIFI RCV: [%u bytes] [", len );
 		for( uint16_t i = 0; i < len; i++ ) ESP_DEBUG( "%02X ", buf[ i ] );
 		ESP_DEBUG( "]\n" );
+
+		if( ++counter >= 100 ) ESP.restart();
 	}
 
 	//-------------------------------------------------------------------------------
