@@ -115,11 +115,13 @@ namespace esp {
 	bool wifi_init(const IPAddress &ip, const IPAddress &gateway, const IPAddress &mask)
 	{
 		ESP_DEBUG( "ESP: WiFi init at mode %u\n", esp::app.mode );
+
 		if( esp::app.mode == esp::Mode::STA ){
 			return wifi_STA_init();
 		}else if( esp::app.mode == esp::Mode::AP ){
 			return wifi_AP_init(ip, gateway, mask );
 		}
+
 		return false;
 	}
 
@@ -163,7 +165,7 @@ namespace esp {
 		WiFi.begin( esp::app.sta_ssid, esp::app.sta_key );
 		WiFi.hostname( esp::hostName );
 
-		ESP_DEBUG( "ESP: WiFi connecting...\n" );
+		ESP_DEBUG( "ESP: WiFi connecting to %s...\n", esp::app.sta_ssid );
 		uint8_t i = 0;
 		while( !WiFi.isConnected() && i++ < 50 ){
 			delay( 100 );
@@ -738,7 +740,6 @@ namespace esp {
 				// Включаем режим приема сырых данных для возможной конфигурации по сырым данным
 				disablePromiscMode();
 				enablePromiscMode();
-				return;
 			}
 		}
 
@@ -1029,7 +1030,7 @@ namespace esp {
 
 		wifi_promiscuous_enable( true );
 
-		esp::app.mode == esp::Mode::PROMISCUOUS;
+		esp::app.mode = esp::Mode::PROMISCUOUS;
 	}
 
 	//-------------------------------------------------------------------------------
