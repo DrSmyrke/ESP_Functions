@@ -1018,17 +1018,33 @@ namespace esp {
 	{
 		ESP_DEBUG( "ESP: Enabled Promiscous mode at %u chanel\n", PROMISCUOUS_MODE_CHANNEL );
 
+#if defined(ARDUINO_ARCH_ESP8266)
 		wifi_set_opmode( STATION_MODE );
 		WiFi.disconnect();
 		wifi_set_channel( PROMISCUOUS_MODE_CHANNEL );
+#elif defined(ARDUINO_ARCH_ESP32)
+		// TODO: continue
+#endif
 		
 		if( func == nullptr ){
+#if defined(ARDUINO_ARCH_ESP8266)
 			wifi_set_promiscuous_rx_cb( promisc_rx_cb );
+#elif defined(ARDUINO_ARCH_ESP32)
+			// TODO: continue
+#endif
 		}else{
+#if defined(ARDUINO_ARCH_ESP8266)
 			wifi_set_promiscuous_rx_cb( func );
+#elif defined(ARDUINO_ARCH_ESP32)
+			// TODO: continue
+#endif
 		}
 
+#if defined(ARDUINO_ARCH_ESP8266)
 		wifi_promiscuous_enable( true );
+#elif defined(ARDUINO_ARCH_ESP32)
+		// TODO: continue
+#endif
 
 		esp::app.mode = esp::Mode::PROMISCUOUS;
 	}
@@ -1036,7 +1052,11 @@ namespace esp {
 	//-------------------------------------------------------------------------------
 	void disablePromiscMode(void)
 	{
+#if defined(ARDUINO_ARCH_ESP8266)
 		wifi_promiscuous_enable( false );
+#elif defined(ARDUINO_ARCH_ESP32)
+		// TODO: continue
+#endif
 	}
 
 	//-------------------------------------------------------------------------------
