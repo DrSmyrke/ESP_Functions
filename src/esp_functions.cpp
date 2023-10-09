@@ -735,6 +735,7 @@ namespace esp {
 #endif
 
 		// Checking reboot reason
+#if defined(ARDUINO_ARCH_ESP8266)
 		if( esp::app.mode == esp::Mode::STA || esp::app.mode == esp::Mode::AP ){
 			if( esp::getResetReason() == REASON_EXT_SYS_RST ){
 				// Включаем режим приема сырых данных для возможной конфигурации по сырым данным
@@ -742,6 +743,9 @@ namespace esp {
 				enablePromiscMode();
 			}
 		}
+#elif defined(ARDUINO_ARCH_ESP32)
+		// TODO: Continue
+#endif
 
 		if( esp::app.mode == esp::Mode::UNKNOWN ) esp::setMode( esp::Mode::AP );
 	}
