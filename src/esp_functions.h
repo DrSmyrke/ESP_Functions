@@ -40,6 +40,7 @@
 	#include <ESP8266WebServer.h>
 #elif defined(ARDUINO_ARCH_ESP32)
 	#include <WebServer.h>
+	#include <esp_wifi.h>
 #endif
 
 //-------------------------------------------------------------------------------
