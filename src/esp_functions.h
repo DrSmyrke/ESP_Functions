@@ -27,6 +27,9 @@
 #ifndef UPDATE_SIZE_UNKNOWN
 	#define UPDATE_SIZE_UNKNOWN					0xFFFFFFFF
 #endif
+#ifndef FIRMWARE_REVISION
+	#define FIRMWARE_REVISION					0
+#endif
 
 #define PROMISCUOUS_MODE_CHANNEL				7
 
