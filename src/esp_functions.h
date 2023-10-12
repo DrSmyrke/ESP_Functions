@@ -41,6 +41,7 @@
 #elif defined(ARDUINO_ARCH_ESP32)
 	#include <WebServer.h>
 	#include <esp_wifi.h>
+	#include <driver/can.h>
 #endif
 
 //-------------------------------------------------------------------------------
@@ -356,6 +357,25 @@ namespace esp {
 	 * @return none
 	 */
 	void promisc_rx_cb(uint8_t *buf, uint16_t len);
+	
+#if defined(ARDUINO_ARCH_ESP8266)
+
+#elif defined(ARDUINO_ARCH_ESP32)
+	/**
+	 * Initialize CAN module
+	 * @param {uint16_t} CAN Speed
+	 * @param {gpio_num_t} tx pin
+	 * @param {gpio_num_t} rx pin
+	 * @param {can_mode_t} mode (default: CAN_MODE_NORMAL)
+	 * @return none
+	 */
+	void CAN_Init(const uint16_t speed, const gpio_num_t tx_pin, const gpio_num_t rx_pin, const can_mode_t mode = CAN_MODE_NORMAL);
+	/**
+	 * Getter for CAN speed value
+	 * @return {uint16_t} speed value
+	 */
+	uint16_t get_CAN_speed(void);
+#endif
 }
 
 //-------------------------------------------------------------------------------

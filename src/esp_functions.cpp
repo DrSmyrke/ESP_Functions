@@ -33,6 +33,7 @@ namespace esp {
 	uint16_t thridVersion;
 	Data app;
 	File updateFile;
+	uint16_t can_speed;
 
 	//-------------------------------------------------------------------------------
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -1075,5 +1076,59 @@ namespace esp {
 		if( ++counter >= 100 ) ESP.restart();
 	}
 
+	//-------------------------------------------------------------------------------
+#if defined(ARDUINO_ARCH_ESP8266)
+
+#elif defined(ARDUINO_ARCH_ESP32)
+	void CAN_Init(const uint16_t speed, const gpio_num_t tx_pin, const gpio_num_t rx_pin, const can_mode_t mode)
+	{
+		can_stop();
+		can_driver_uninstall();
+
+		ESP_DEBUG( "ESP: CAN Initialize at %u, %u pins %uKbt/s mode: %u\n", tx_pin, rx_pin, mode );
+
+		can_general_config_t g_config = CAN_GENERAL_CONFIG_DEFAULT( tx_pin, rx_pin, mode );
+		can_timing_config_t t_config = CAN_TIMING_CONFIG_125KBITS();
+		can_filter_config_t f_config = CAN_FILTER_CONFIG_ACCEPT_ALL();
+
+		can_speed = speed;
+		switch( speed ){
+			case 25:	t_config = CAN_TIMING_CONFIG_25KBITS();		break;
+			case 50:	t_config = CAN_TIMING_CONFIG_50KBITS();		break;
+			case 100:	t_config = CAN_TIMING_CONFIG_100KBITS();	break;
+			case 125:	t_config = CAN_TIMING_CONFIG_125KBITS();	break;
+			case 250:	t_config = CAN_TIMING_CONFIG_250KBITS();	break;
+			case 500:	t_config = CAN_TIMING_CONFIG_500KBITS();	break;
+			case 800:	t_config = CAN_TIMING_CONFIG_800KBITS();	break;
+			case 1000:	t_config = CAN_TIMING_CONFIG_1MBITS();		break;
+			default:
+				t_config = CAN_TIMING_CONFIG_125KBITS();
+				can_speed = 125;
+			break;
+		}
+
+		//Install CAN driver
+		if( can_driver_install( &g_config, &t_config, &f_config ) == ESP_OK ){
+			ESP_DEBUG( "ESP: CAN Driver installed\n" );
+		}else{
+			ESP_DEBUG( "ESP: CAN Failed to install driver\n" );
+			return;
+		}
+
+		//Start CAN driver
+		if( can_start() == ESP_OK ){
+			ESP_DEBUG( "ESP: CAN Driver started\n" );
+		}else{
+			ESP_DEBUG( "ESP: CAN Failed to start driver\n" );
+			return;
+		}
+	}
+
+	//-------------------------------------------------------------------------------
+	uint16_t get_CAN_speed(void)
+	{
+		return can_speed;
+	}
+#endif
 	//-------------------------------------------------------------------------------
 }
