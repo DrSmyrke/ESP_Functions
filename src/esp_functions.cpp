@@ -1131,4 +1131,14 @@ namespace esp {
 	}
 #endif
 	//-------------------------------------------------------------------------------
+	void printHexData(const uint8_t* data, size_t len)
+	{
+		ESP_DEBUG( "[" );
+		for( size_t i = 0; i < len; i++ ){
+			if( i > 0 ) ESP_DEBUG( " " );
+			ESP_DEBUG( "%02x", data[ i ] );
+		}
+		ESP_DEBUG( "]" );
+	}
+	//-------------------------------------------------------------------------------
 }

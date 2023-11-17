@@ -376,6 +376,13 @@ namespace esp {
 	 */
 	uint16_t get_CAN_speed(void);
 #endif
+	/**
+	 * Print data at HEX format
+	 * @return {const uint8_t*} data pointer
+	 * @return {size_t} data length
+	 * @return none
+	*/
+	void printHexData(const uint8_t* data, size_t len);
 }
 
 //-------------------------------------------------------------------------------
