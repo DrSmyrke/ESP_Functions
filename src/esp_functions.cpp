@@ -1073,7 +1073,7 @@ namespace esp {
 		for( uint16_t i = 0; i < len; i++ ) ESP_DEBUG( "%02X ", buf[ i ] );
 		ESP_DEBUG( "]\n" );
 
-		if( ++counter >= 100 ) ESP.restart();
+		if( ++counter >= READ_RAW_PACKETS_BEFORE_START ) ESP.restart();
 	}
 
 	//-------------------------------------------------------------------------------

@@ -32,6 +32,9 @@
 #endif
 
 #define PROMISCUOUS_MODE_CHANNEL				7
+#ifndef READ_RAW_PACKETS_BEFORE_START
+	#define READ_RAW_PACKETS_BEFORE_START		100
+#endif
 
 //-------------------------------------------------------------------------------
 #include <stdint.h>
