@@ -786,7 +786,7 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	void saveSettings(const uint8_t* data, uint8_t length, const char* settingsFile)
+	void saveSettings(const uint8_t* data, uint32_t length, const char* settingsFile)
 	{
 		if( length <= 0 || data == nullptr || settingsFile == nullptr || !esp::flags.useFS ) return;
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -801,9 +801,9 @@ namespace esp {
 	}
 
 	//-------------------------------------------------------------------------------
-	uint8_t loadSettings(uint8_t* data, size_t size, const char* settingsFile)
+	uint32_t loadSettings(uint8_t* data, uint32_t size, const char* settingsFile)
 	{
-		uint8_t res = 0;
+		uint32_t res = 0;
 		if( size <= 0 || data == nullptr || settingsFile == nullptr || !esp::flags.useFS ) return res;
 
 		if( esp::isFileExists( settingsFile ) ){

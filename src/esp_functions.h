@@ -283,19 +283,19 @@ namespace esp {
 	/**
 	 * Save settings at file from SPI FS
 	 * @param {const uint8_t*} data buffer (default: nullptr)
-	 * @param {uint8_t} length data (default: 0)
+	 * @param {uint32_t} length data (default: 0)
 	 * @param {const char*} settingsFile - filepath (default: USER_SETTINGS_FILE)
 	 * @return {none}
 	 */
-	void saveSettings(const uint8_t* data = nullptr, uint8_t length = 0, const char* settingsFile = USER_SETTINGS_FILE);
+	void saveSettings(const uint8_t* data = nullptr, uint32_t length = 0, const char* settingsFile = USER_SETTINGS_FILE);
 	/**
 	 * Read settings at file from SPI FS
 	 * @param {uint8_t*} data buffer (default: nullptr)
-	 * @param {size_t} length data (default: 0)
+	 * @param {uint32_t} length data (default: 0)
 	 * @param {const char*} settingsFile - filepath (default: USER_SETTINGS_FILE)
-	 * @return {uint8_t} reading length
+	 * @return {uint32_t} reading length
 	 */
-	uint8_t loadSettings(uint8_t* data = nullptr, size_t size = 0, const char* settingsFile = USER_SETTINGS_FILE);
+	uint32_t loadSettings(uint8_t* data = nullptr, uint32_t size = 0, const char* settingsFile = USER_SETTINGS_FILE);
 	/**
 	 * Set system user and password
 	 * @param {const char*} login (default: nullptr)
