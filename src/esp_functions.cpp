@@ -851,7 +851,8 @@ namespace esp {
 						ESP_DEBUG( "Update begin\n" );
 						esp::flags.updateFirmware = 1;
 
-						if( !Update.begin( UPDATE_SIZE_UNKNOWN ) ){ //start with max available size
+						// if( !Update.begin( UPDATE_SIZE_UNKNOWN ) ){ //start with max available size
+						if( !Update.begin( upload.contentLength ) ){ //start with max available size
 							Update.printError( Serial );
 							webServer->send ( 500, "text/html", "update begin fs error" );
 							esp::flags.updateError = 1;
@@ -1071,9 +1072,16 @@ namespace esp {
 
 		ESP_DEBUG( "WIFI RCV: [%u bytes] [", len );
 		for( uint16_t i = 0; i < len; i++ ) ESP_DEBUG( "%02X ", buf[ i ] );
-		ESP_DEBUG( "]\n" );
+		ESP_DEBUG( "] [%u/%u]\n", counter, READ_RAW_PACKETS_BEFORE_START );
 
-		if( ++counter >= READ_RAW_PACKETS_BEFORE_START ) ESP.restart();
+		if( counter >= READ_RAW_PACKETS_BEFORE_START ){
+			disablePromiscMode();
+			ESP.restart();
+			// while( 1 );
+			return;
+		}
+
+		counter++;
 	}
 
 	//-------------------------------------------------------------------------------
