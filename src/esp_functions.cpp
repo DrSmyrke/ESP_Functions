@@ -225,6 +225,7 @@ namespace esp {
 		}
 
 		webServer->on( "/sysinfo", [ webServer ](void){
+			webServer->sendHeader( "Access-Control-Allow-Origin", "*" );
 			if( pageBuff == nullptr ){
 				webServer->send ( 200, "text/html", "pageBuff is nullptr" );
 				return;
