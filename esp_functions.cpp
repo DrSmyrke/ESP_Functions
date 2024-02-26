@@ -853,7 +853,11 @@ namespace esp {
 						esp::flags.updateFirmware = 1;
 
 						// if( !Update.begin( UPDATE_SIZE_UNKNOWN ) ){ //start with max available size
+#if defined(ARDUINO_ARCH_ESP8266)
 						if( !Update.begin( upload.contentLength ) ){
+#elif defined(ARDUINO_ARCH_ESP32)
+						if( !Update.begin( upload.totalSize ) ){
+#endif
 							Update.printError( Serial );
 							webServer->send ( 500, "text/html", "update begin fs error" );
 							esp::flags.updateError = 1;
@@ -863,7 +867,11 @@ namespace esp {
 						ESP_DEBUG( "Update begin\n" );
 						esp::flags.updateFirmware = 1;
 
+#if defined(ARDUINO_ARCH_ESP8266)
 						if( !Update.begin( upload.contentLength, U_FS ) ){
+#elif defined(ARDUINO_ARCH_ESP32)
+						if( !Update.begin( upload.totalSize, U_SPIFFS ) ){
+#endif
 							Update.printError( Serial );
 							webServer->send ( 500, "text/html", "update begin fs error" );
 							esp::flags.updateError = 1;
