@@ -12,6 +12,7 @@
 	#include <Update.h>
 	#include <esp_wifi.h>
 	#include <rom/rtc.h>
+	#include <esp_task_wdt.h>
 #endif
 
 //-------------------------------------------------------------------------------
@@ -1167,5 +1168,26 @@ namespace esp {
 		}
 		ESP_DEBUG( "]" );
 	}
+	//-------------------------------------------------------------------------------
+	void wdt_init(void)
+	{
+#if defined(ARDUINO_ARCH_ESP8266)
+		ESP.wdtEnable( WDT_TIMEOUT );
+#elif defined(ARDUINO_ARCH_ESP32)
+		esp_task_wdt_init( WDT_TIMEOUT, true ); //enable panic so ESP32 restarts
+		esp_task_wdt_add( NULL ); //add current thread to WDT watch
+#endif
+	}
+
+	//-------------------------------------------------------------------------------
+	void wdt_reset(void)
+	{
+#if defined(ARDUINO_ARCH_ESP8266)
+		ESP.wdtFeed();
+#elif defined(ARDUINO_ARCH_ESP32)
+		esp_task_wdt_reset();
+#endif
+	}
+
 	//-------------------------------------------------------------------------------
 }

@@ -36,6 +36,14 @@
 	#define READ_RAW_PACKETS_BEFORE_START		100
 #endif
 
+#ifndef WDT_TIMEOUT
+	#if defined(ARDUINO_ARCH_ESP8266)
+		#define WDT_TIMEOUT						WDTO_8S
+	#elif defined(ARDUINO_ARCH_ESP32)
+		#define WDT_TIMEOUT						8
+	#endif
+#endif
+
 //-------------------------------------------------------------------------------
 #include <stdint.h>
 
@@ -386,6 +394,16 @@ namespace esp {
 	 * @return none
 	*/
 	void printHexData(const uint8_t* data, size_t len);
+	/**
+	 * Initialize WDT
+	 * @return none
+	*/
+	void wdt_init(void);
+	/**
+	 * Reset WDT
+	 * @return none
+	*/
+	void wdt_reset(void);
 }
 
 //-------------------------------------------------------------------------------
