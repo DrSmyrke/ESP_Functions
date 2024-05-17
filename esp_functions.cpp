@@ -156,9 +156,6 @@ namespace esp {
 	{
 		ESP_DEBUG( "ESP: STA MODE INIT...\n" );
 
-		char ssid[ ESP_CONFIG_SSID_MAX_LEN ];
-		char skey[ ESP_CONFIG_KEY_MAX_LEN ];
-
 		WiFi.softAPdisconnect( true );
 		WiFi.mode( WiFiMode_t::WIFI_STA );
 		WiFi.setAutoReconnect( true );
