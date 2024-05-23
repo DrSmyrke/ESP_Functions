@@ -53,6 +53,7 @@
 	#include <WebServer.h>
 	#include <esp_wifi.h>
 	#include <driver/can.h>
+	#include <time.h>
 #endif
 
 //-------------------------------------------------------------------------------
@@ -84,6 +85,7 @@ namespace esp {
 		unsigned char updateError: 1;
 		unsigned char updateFirmware: 1;
 		unsigned char updateFile: 1;
+		unsigned char rtc_overflow: 1;
 	} Flags;
 	typedef struct {
 		uint8_t mode;
@@ -102,6 +104,7 @@ namespace esp {
 	extern uint8_t firstVersion;
 	extern uint8_t secondVersion;
 	extern uint16_t thridVersion;
+	extern int rtc_offset;									//offest gmt offset in seconds
 	
 	/**
 	 * checking acces from web
@@ -404,8 +407,45 @@ namespace esp {
 	 * @return none
 	*/
 	void wdt_reset(void);
+#if defined(ARDUINO_ARCH_ESP32)
+	/**
+	 * @brief Set RTC Date Time
+	 * @param  sc
+            second (0-59)
+    	@param  mn
+            minute (0-59)
+    	@param  hr
+            hour of day (0-23)
+    	@param  dy
+            day of month (1-31)
+	    @param  mt
+            month (1-12)
+    	@param  yr
+            year ie 2021
+    	@param  ms
+            microseconds (optional)
+	 * @return none
+	*/
+	void rtc_setDateTime(int sc, int mn, int hr, int dy, int mt, int yr, int ms = 0);
+	/**
+    	@brief  set the internal RTC time
+    	@param  epoch
+            epoch time in seconds
+    	@param  ms
+            microseconds (optional)
+	**/
+	void rtc_set(unsigned long epoch = 1609459200, int ms = 0);	// default (1609459200) = 1st Jan 2021
+	/**
+		@brief  get the internal RTC time as a tm struct
+		@return none
+	**/
+	struct tm* rtc_getDateTime(void);
+#endif
 }
-
+/*!
+    @brief  set the internal RTC time
+    
+*/
 //-------------------------------------------------------------------------------
 
 #endif /* __ESP_FUNCTIONS_H__ */

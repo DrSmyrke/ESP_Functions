@@ -32,6 +32,7 @@ namespace esp {
 	uint8_t firstVersion;
 	uint8_t secondVersion;
 	uint16_t thridVersion;
+	int rtc_offset;
 	Data app;
 	File updateFile;
 	uint16_t can_speed;
@@ -694,6 +695,7 @@ namespace esp {
 		esp::flags.captivePortalAccess				= 0;
 		esp::flags.autoUpdate						= 0;
 		esp::app.mode								= esp::Mode::UNKNOWN;
+		esp::rtc_offset								= 0;
 
 		if( esp::isFileExists( ESP_AUTOUPDATE_FILENAME ) ) esp::flags.autoUpdate = 1;
 
@@ -1186,5 +1188,60 @@ namespace esp {
 #endif
 	}
 
+#if defined(ARDUINO_ARCH_ESP32)
+	//-------------------------------------------------------------------------------
+	void rtc_setDateTime(int sc, int mn, int hr, int dy, int mt, int yr, int ms)
+	{
+		// seconds, minute, hour, day, month, year $ microseconds(optional)
+		// ie setTime(20, 34, 8, 1, 4, 2021) = 8:34:20 1/4/2021
+		struct tm t = {0, 0, 0, 0, 0, 0, 0, 0, 0};      // Initalize to all 0's
+		t.tm_year = yr - 1900;    // This is year-1900, so 121 = 2021
+		t.tm_mon = mt - 1;
+		t.tm_mday = dy;
+		t.tm_hour = hr;
+		t.tm_min = mn;
+		t.tm_sec = sc;
+		time_t timeSinceEpoch = mktime( &t );
+		rtc_set( timeSinceEpoch, ms );
+	}
+
+	//-------------------------------------------------------------------------------
+	void rtc_set(unsigned long epoch, int ms)
+	{
+		struct timeval tv;
+		if (epoch > 2082758399){
+			esp::flags.rtc_overflow = 1;
+			tv.tv_sec = epoch - 2082758399;  // epoch time (seconds)
+		} else {
+			esp::flags.rtc_overflow = 0;
+			tv.tv_sec = epoch;  // epoch time (seconds)
+		}
+		tv.tv_usec = ms;    // microseconds
+		settimeofday( &tv, NULL );
+	}
+
+	//-------------------------------------------------------------------------------
+	struct tm* rtc_getDateTime(void)
+	{
+		struct tm timeinfo;
+		time_t now;
+		time( &now );
+		localtime_r( &now, &timeinfo );
+		time_t tt = mktime( &timeinfo );
+		if( esp::flags.rtc_overflow ){
+			tt += 63071999;
+		}
+		if( esp::rtc_offset > 0){
+			tt += (unsigned int) esp::rtc_offset;
+		} else {
+			tt -= (unsigned int) (esp::rtc_offset * -1);
+		}
+		struct tm* tn = localtime( &tt );
+		if ( esp::flags.rtc_overflow ){
+			tn->tm_year += 64;
+		}
+		return tn;
+	}
+#endif
 	//-------------------------------------------------------------------------------
 }
